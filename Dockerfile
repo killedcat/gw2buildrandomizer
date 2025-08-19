@@ -12,8 +12,6 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 
 COPY . .
 
-ARG PORT=64429
-ENV PORT=${PORT}
-EXPOSE ${PORT}
+EXPOSE 64429
 
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "${PORT}"]
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "64429"]

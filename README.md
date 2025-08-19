@@ -17,8 +17,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
-set PORT=64429 # PowerShell: $env:PORT=64429
-uvicorn server:app --host 0.0.0.0 --port %PORT% --reload
+uvicorn server:app --host 0.0.0.0 --port 64429 --reload
 ```
 Open http://127.0.0.1:64429/
 
@@ -27,7 +26,7 @@ Open http://127.0.0.1:64429/
 Build and run:
 ```bash
 docker build -t gw2-randomizer .
-docker run --rm -e -p 64429:64429 gw2-randomizer
+docker run --rm -p 64429:64429 gw2-randomizer
 ```
 Open http://127.0.0.1:64429/
 
