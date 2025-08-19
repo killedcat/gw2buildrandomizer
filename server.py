@@ -5,6 +5,7 @@ from typing import Optional, Dict, List
 import re
 import random
 import httpx
+import json
 
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -69,17 +70,35 @@ app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), na
 # Global caches
 SKILL_NAME_TO_DETAILS: Dict[str, List[dict]] = {}
 SPEC_NAME_TO_DETAILS: Dict[str, List[dict]] = {}
+TRAIT_ID_TO_DETAILS: Dict[int, dict] = {}
+PVP_AMULET_NAME_TO_DETAILS: Dict[str, dict] = {}
+RUNES_RELICS_SIGILS: Dict[str, str] = {}
 
 
 def _norm(s: str) -> str:
-    return re.sub(r"[\"'`“”‘’!?.:,]", "", (s or "").lower()).strip()
+    return re.sub(r"[\"'`""''!?.:,]", "", (s or "").lower()).strip()
 
 
 @app.on_event("startup")
 async def on_startup() -> None:
-    # Hydrate skill cache for robust icon lookups
+    # Hydrate all caches for robust icon lookups
     try:
-        async with httpx.AsyncClient(base_url="https://api.guildwars2.com", timeout=30.0) as client:
+        # Load runes, relics, and sigils dictionary
+        print("Loading runes, relics, and sigils dictionary...")
+        try:
+            with open("runes_relics_sigils.json", "r", encoding="utf-8") as f:
+                global RUNES_RELICS_SIGILS
+                RUNES_RELICS_SIGILS = json.load(f)
+            print(f"Loaded {len(RUNES_RELICS_SIGILS)} runes, relics, and sigils")
+        except Exception as e:
+            print(f"Error loading runes_relics_sigils.json: {e}")
+            RUNES_RELICS_SIGILS = {}
+        
+        async with httpx.AsyncClient(base_url="https://api.guildwars2.com", timeout=60.0) as client:
+            print("Loading GW2 API caches...")
+            
+            # 1. Skills cache
+            print("Loading skills...")
             ids = (await client.get("/v2/skills")).json()
             if isinstance(ids, list) and ids:
                 # chunk fetch details
@@ -99,7 +118,10 @@ async def on_startup() -> None:
                     cache.setdefault(key, []).append(d)
                 global SKILL_NAME_TO_DETAILS
                 SKILL_NAME_TO_DETAILS = cache
-            # Hydrate specializations cache
+                print(f"Loaded {len(details)} skills")
+            
+            # 2. Specializations cache
+            print("Loading specializations...")
             spec_ids = (await client.get("/v2/specializations")).json()
             if isinstance(spec_ids, list) and spec_ids:
                 spec_details: List[dict] = []
@@ -117,7 +139,46 @@ async def on_startup() -> None:
                     spec_cache.setdefault(key, []).append(d)
                 global SPEC_NAME_TO_DETAILS
                 SPEC_NAME_TO_DETAILS = spec_cache
-    except Exception:
+                print(f"Loaded {len(spec_details)} specializations")
+            
+            # 3. Traits cache (for trait icons)
+            print("Loading traits...")
+            trait_ids = (await client.get("/v2/traits")).json()
+            if isinstance(trait_ids, list) and trait_ids:
+                trait_details: List[dict] = []
+                for i in range(0, len(trait_ids), 200):
+                    chunk = trait_ids[i : i + 200]
+                    det = (await client.get("/v2/traits", params={"ids": ",".join(str(x) for x in chunk), "lang": "en"})).json()
+                    if isinstance(det, list):
+                        trait_details.extend(det)
+                
+                # Build ID-based map for traits
+                trait_cache: Dict[int, dict] = {}
+                for trait in trait_details:
+                    trait_id = trait.get("id")
+                    if trait_id is not None:
+                        trait_cache[trait_id] = trait
+                global TRAIT_ID_TO_DETAILS
+                TRAIT_ID_TO_DETAILS = trait_cache
+                print(f"Loaded {len(trait_details)} traits")
+            
+            # 4. PvP Amulets cache
+            print("Loading PvP amulets...")
+            pvp_amulets = (await client.get("/v2/pvp/amulets", params={"ids": "all", "lang": "en"})).json()
+            if isinstance(pvp_amulets, list):
+                amulet_cache: Dict[str, dict] = {}
+                for amulet in pvp_amulets:
+                    name = amulet.get("name")
+                    if name:
+                        amulet_cache[name] = amulet
+                global PVP_AMULET_NAME_TO_DETAILS
+                PVP_AMULET_NAME_TO_DETAILS = amulet_cache
+                print(f"Loaded {len(pvp_amulets)} PvP amulets")
+            
+            print("All caches loaded successfully!")
+            
+    except Exception as e:
+        print(f"Error loading caches: {e}")
         # Leave cache empty on failure; UI will still work
         pass
 
@@ -189,123 +250,126 @@ async def api_build(
             names = extract_sigils(seg)
             weapon_sigil_names.append(names[:2])
 
-    # Resolve icons server-side for consistency
-    async def fetch_by_search(client: httpx.AsyncClient, collection: str, name: str):
-        cleaned = re.sub(r'["\'`“”‘’!?.:,]', '', name).strip()
-        params = {"search": cleaned or name, "lang": "en"}
-        ids = (await client.get(f"/v2/{collection}", params=params)).json()
-        if not isinstance(ids, list) or not ids:
-            return []
-        det = (await client.get(f"/v2/{collection}", params={"ids": ",".join(str(i) for i in ids[:50]), "lang": "en"})).json()
-        return det if isinstance(det, list) else []
-
     def norm(s: str) -> str:
         return _norm(s)
 
-    async with httpx.AsyncClient(base_url="https://api.guildwars2.com", timeout=20.0) as client:
-        # Skill icons strictly from preloaded cache (no search), using IDs we already have in details
-        skill_icons = []
-        for idx, sk in enumerate(skills):
-            target = norm(sk)
-            expected_slot = "Heal" if idx == 0 else ("Elite" if idx == 4 else "Utility")
-            candidates = SKILL_NAME_TO_DETAILS.get(target, [])
-            match = next((d for d in candidates if d.get("slot") == expected_slot and prof_name in (d.get("professions") or [])), None)
-            if not match:
-                match = next((d for d in candidates if d.get("slot") == expected_slot), None)
-            if not match and candidates:
-                match = candidates[0]
-            skill_icons.append((match or {}).get("icon", ""))
+    # Skill icons strictly from preloaded cache (no search), using IDs we already have in details
+    skill_icons = []
+    for idx, sk in enumerate(skills):
+        target = norm(sk)
+        expected_slot = "Heal" if idx == 0 else ("Elite" if idx == 4 else "Utility")
+        candidates = SKILL_NAME_TO_DETAILS.get(target, [])
+        match = next((d for d in candidates if d.get("slot") == expected_slot and prof_name in (d.get("professions") or [])), None)
+        if not match:
+            match = next((d for d in candidates if d.get("slot") == expected_slot), None)
+        if not match and candidates:
+            match = candidates[0]
+        skill_icons.append((match or {}).get("icon", ""))
 
-        # Sigil icons (via items endpoint lookup by name) per API:2/items UpgradeComponent
-        async def fetch_sigil_icon(name: str) -> str:
-            def n(s: str) -> str:
-                return re.sub(r"[^a-z0-9]+", " ", (s or "").lower()).strip()
-            candidates = [
-                f"Superior Sigil of {name}",
-                f"Major Sigil of {name}",
-                f"Minor Sigil of {name}",
-                f"Sigil of {name}",
-            ]
-            try:
-                for query in candidates:
-                    ids = (await client.get("/v2/items", params={"search": query, "lang": "en"})).json()
-                    if not (isinstance(ids, list) and ids):
-                        continue
-                    det = (await client.get("/v2/items", params={"ids": ",".join(str(i) for i in ids[:100]), "lang": "en"})).json()
-                    if not isinstance(det, list):
-                        continue
-                    exact_key = n(query)
-                    # Prefer exact name match of an UpgradeComponent/Sigil
-                    for it in det:
-                        details = it.get("details") or {}
-                        if it.get("type") == "UpgradeComponent" and details.get("type") == "Sigil" and n(it.get("name", "")) == exact_key:
-                            return it.get("icon", "") or ""
-                    # Fallback: any item containing the sigil name and of Sigil type
-                    for it in det:
-                        details = it.get("details") or {}
-                        if it.get("type") == "UpgradeComponent" and details.get("type") == "Sigil" and n(query) in n(it.get("name", "")):
-                            return it.get("icon", "") or ""
-                return ""
-            except Exception:
-                return ""
-
-        weapon_sigils: list[list[dict]] = []
-        for names in weapon_sigil_names:
-            set_icons: list[dict] = []
-            for n in names:
-                icon = await fetch_sigil_icon(n.strip())
-                set_icons.append({"name": f"Sigil of {n.strip()}", "icon": icon})
-            weapon_sigils.append(set_icons)
-
-        # Revenant legend icons (hardcoded map; more reliable than API lookups)
-        legend_icons: list[str] = []
-        if prof_name == "Revenant":
-            # find legends line like "Shiro / Ventari"
-            mleg = re.search(r"^\s*([A-Za-z' ]+)\s*/\s*([A-Za-z' ]+)\s*$", text, re.M)
-            if mleg:
-                names = [mleg.group(1).strip(), mleg.group(2).strip()]
-                for nm in names:
-                    icon = LEGEND_NAME_TO_ICON.get(nm, "")
-                    legend_icons.append(icon)
-
-        # Spec icons and trait icons (use specialization cache per API:2/specializations)
-        enriched_specs = []
-        for s in specs:
-            icon = ""
-            matrix_icons: list[list[str]] = [ ["", "", ""], ["", "", ""], ["", "", ""] ]
-            try:
-                cand = SPEC_NAME_TO_DETAILS.get(norm(s["name"])) or []
-                if cand:
-                    det = next((d for d in cand if d.get("profession") == prof_name), cand[0])
-                    icon = det.get("icon", "") or ""
-                    majors = det.get("major_traits") or []
-                    if len(majors) == 9:
-                        triad = [int(x) for x in s.get("traits", []) if x]
-                        if len(triad) == 3:
-                            # Fetch all 9 major trait icons for the 3x3 matrix
-                            all_ids = [majors[i] for i in range(9)]
-                            tdet = (await client.get("/v2/traits", params={"ids": ",".join(str(i) for i in all_ids), "lang": "en"})).json()
-                            if isinstance(tdet, list) and len(tdet) == 9:
-                                # Fill matrix row-wise
-                                for r in range(3):
-                                    for c in range(3):
-                                        tr = tdet[r*3 + c]
-                                        matrix_icons[r][c] = tr.get("icon", "") or ""
-            except Exception:
-                pass
-            enriched_specs.append({"name": s["name"], "traits": s["traits"], "icon": icon, "trait_matrix": matrix_icons})
-
-        # PvP amulet icon
-        amulet_icon = ""
+    # Sigil icons (using dictionary)
+    def fetch_sigil_icon(name: str) -> str:
+        candidates = [
+            f"Superior Sigil of {name}",
+            f"Major Sigil of {name}",
+            f"Minor Sigil of {name}",
+            f"Sigil of {name}",
+        ]
         try:
-            am_match = re.search(r"^(.+?) Amulet, Rune of", text, re.M)
+            for query in candidates:
+                if query in RUNES_RELICS_SIGILS:
+                    return RUNES_RELICS_SIGILS[query]
+            return ""
+        except Exception:
+            return ""
+
+    weapon_sigils: list[list[dict]] = []
+    for names in weapon_sigil_names:
+        set_icons: list[dict] = []
+        for n in names:
+            icon = fetch_sigil_icon(n.strip())
+            set_icons.append({"name": f"Sigil of {n.strip()}", "icon": icon})
+        weapon_sigils.append(set_icons)
+
+    # Revenant legend icons (hardcoded map; more reliable than API lookups)
+    legend_icons: list[str] = []
+    if prof_name == "Revenant":
+        # find legends line like "Shiro / Ventari"
+        mleg = re.search(r"^\s*([A-Za-z' ]+)\s*/\s*([A-Za-z' ]+)\s*$", text, re.M)
+        if mleg:
+            names = [mleg.group(1).strip(), mleg.group(2).strip()]
+            for nm in names:
+                icon = LEGEND_NAME_TO_ICON.get(nm, "")
+                legend_icons.append(icon)
+
+    # Spec icons and trait icons (use specialization cache per API:2/specializations)
+    enriched_specs = []
+    for s in specs:
+        icon = ""
+        matrix_icons: list[list[str]] = [ ["", "", ""], ["", "", ""], ["", "", ""] ]
+        try:
+            cand = SPEC_NAME_TO_DETAILS.get(norm(s["name"])) or []
+            if cand:
+                det = next((d for d in cand if d.get("profession") == prof_name), cand[0])
+                icon = det.get("icon", "") or ""
+                majors = det.get("major_traits") or []
+                if len(majors) == 9:
+                    triad = [int(x) for x in s.get("traits", []) if x]
+                    if len(triad) == 3:
+                        # Use cached trait icons for the 3x3 matrix
+                        for r in range(3):
+                            for c in range(3):
+                                trait_id = majors[r*3 + c]
+                                trait_data = TRAIT_ID_TO_DETAILS.get(trait_id, {})
+                                matrix_icons[r][c] = trait_data.get("icon", "") or ""
+        except Exception:
+            pass
+        enriched_specs.append({"name": s["name"], "traits": s["traits"], "icon": icon, "trait_matrix": matrix_icons})
+
+        # PvP amulet, rune, and relic parsing
+        amulet_icon = ""
+        amulet_name = ""
+        rune_name = ""
+        relic_name = ""
+        rune_icon = ""
+        relic_icon = ""
+        try:
+            am_match = re.search(r"^(.+?) Amulet, Rune of (.+?), Relic of (.+?)$", text, re.M)
             if am_match:
-                target = f"{am_match.group(1).strip()} Amulet"
-                ams = (await client.get("/v2/pvp/amulets", params={"ids": "all", "lang": "en"})).json()
-                if isinstance(ams, list):
-                    hit = next((a for a in ams if a.get("name") == target), None)
-                    if hit:
-                        amulet_icon = hit.get("icon", "") or ""
+                amulet_name = am_match.group(1).strip()
+                rune_name = am_match.group(2).strip()
+                relic_name = am_match.group(3).strip()
+                
+                # Get amulet icon from cache
+                target = f"{amulet_name} Amulet"
+                hit = PVP_AMULET_NAME_TO_DETAILS.get(target, {})
+                amulet_icon = hit.get("icon", "") or ""
+                
+                # Get rune icon from dictionary
+                try:
+                    rune_candidates = [
+                        f"Superior Rune of {rune_name}",
+                        f"Major Rune of {rune_name}",
+                        f"Minor Rune of {rune_name}",
+                        f"Rune of {rune_name}",
+                    ]
+                    for query in rune_candidates:
+                        if query in RUNES_RELICS_SIGILS:
+                            rune_icon = RUNES_RELICS_SIGILS[query]
+                            break
+                except Exception:
+                    pass
+                
+                # Get relic icon from dictionary
+                try:
+                    relic_candidates = [
+                        f"Relic of {relic_name}",
+                    ]
+                    for query in relic_candidates:
+                        if query in RUNES_RELICS_SIGILS:
+                            relic_icon = RUNES_RELICS_SIGILS[query]
+                            break
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -320,6 +384,11 @@ async def api_build(
         "weapon_sigils": weapon_sigils,
         "legend_icons": legend_icons,
         "amulet_icon": amulet_icon,
+        "amulet_name": amulet_name,
+        "rune_name": rune_name,
+        "relic_name": relic_name,
+        "rune_icon": rune_icon,
+        "relic_icon": relic_icon,
     }
 
 

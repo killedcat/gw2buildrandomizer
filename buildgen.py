@@ -6,7 +6,19 @@ from gw2APIdicts import *
 
 amulets = ["Assassin", "Avatar", "Berserker", "Carrion", "Demolisher", "Destroyer", "Grieving", "Marauder", "Paladin", "Rabid", "Rampager", "Sage", "Sinister", "Swashbuckler", "Valkyrie", "Wizard"]
 runes = ["Adventure", "Air", "Altruism", "Balthazar", "Divinity", "Dwayna", "Earth", "Evasion", "Exuberance", "Fire", "Grenth", "Hoelbrak", "Ice", "Infiltration", "Leadership", "Lyssa", "Melandru", "Orr", "Radiance", "Rage", "Rata Sum", "Resistance", "Sanctuary", "Scavenging", "Speed", "Strength", "Afflicted", "Aristocracy", "Baelfire", "Berserker", "Centaur", "Chronomancer", "Citadel", "Daredevil", "Deadeye", "Dolyak", "Dragonhunter", "Druid", "Eagle", "Elementalist", "Engineer", "Fighter", "Firebrand", "Flame Legion", "Flock", "Forge", "Grove", "Guardian", "Herald", "Holosmith", "Krait", "Lynx", "Mad King", "Mesmer", "Mirage", "Monk", "Necromancer", "Nightmare", "Ranger", "Reaper", "Renegade", "Revenant", "Scholar", "Scrapper", "Soldier", "Soulbeast", "Spellbreaker", "Sunless", "Svanir", "Tempest", "Thief", "Trapper", "Traveler", "Undead", "Warrior", "Water", "Weaver", "Wurm", "Thorns", "Vampirism"]
-relics = ["Akeems", "Antitoxin", "Cerus", "Dagda", "Durability", "Dwayna", "Evasion", "Fireworks", "Isgarren", "Leadership", "Lyrh", "Mabon", "Peitha", "Resistance", "Speed", "Adventurer", "Afflicted", "Aristocracy", "Astral Ward", "Brawler", "Centaur", "Chronomancer", "Citadel", "Daredevil", "Deadeye", "Defender", "Dragonhunter", "Firebrand", "Flock", "Fractal", "Herald", "Ice", "Krait", "Mirage", "Monk", "Necromancer", "Nightmare", "Pack", "Reaper", "Scourge", "Thief", "Trooper", "Unseen Invasion", "Warrior", "Water", "Weaver", "Wizards Tower", "Zephyrite", "Vass"]
+relics = [
+    # Core relics (40 at launch + 12 from Core Set 2)
+    "Agony", "Akeem", "Altruism", "Antitoxin", "Atrocity", "Bava Nisos", "Bloodstone",  "Living City", "Mistburn",  "Phenom",
+    "Dagda", "Febe",  "Midnight King",  "Demon Queen", "Nourys", "Nayos", "Karakosa",  "Twin Generals",  "Founding", "Mosyn",
+     "Sorcerer",  "Wayfinder", "Zakiros",  "Blightbringer", "Rivers",  "Stormsinger",  "Claw", "Sorrow", "Geysers",  "Steamshrieker",
+    "Mount Balrior",  "Mists Tide",  "Beehive", "Reunification",  "Eagle", "Thorns", "Fire", "Abaddon", "Balthazar", "Dwayna",
+    "Lyssa", "Melandru", "Grenth",  "Flock", "Isgarren",  "Monk", "Ice", "Surging", "Cerus",  "Dragonhunter",
+    "Mabon",  "Warrior", "Speed",  "Fractal",  "Mirage",  "Necromancer", "Peitha",  "Weaver",  "Herald",  "Krait",
+     "Lich",  "Citadel", "Fireworks",  "Ogre",  "Daredevil",  "Scourge",  "Centaur",  "Astral Ward",  "Sunless",
+     "Trooper", "Mercy", "Earth",  "Chronomancer",  "Firebrand", "Durability", "Lyhr",  "Privateer",  "Brawler", "Water",
+     "Cavalier",  "Wizard's Tower",  "Adventurer",  "Nightmare", "Evasion", "Leadership", "Vampirism",  "Afflicted",  "Unseen Invasion",  "Reaper",
+     "Pack", "Vass", "Resistance",  "Aristocracy",  "Zephyrite",  "Holosmith",  "Thief",  "Deadeye",  "Defender"
+]
 sigils = ["Absorption", "Agony", "Battle", "Cleansing", "Compounding", "Confusion", "Courage", "Doom", "Energy", "Enhancement", "Escape", "Exploitation", "Exposure", "Intelligence", "Misery", "Opportunity", "Peril", "Purging", "Revocation", "Ruthlessness", "Savagery", "Separation", "Smoldering", "Stagnation", "Transference", "Venom"]
 
 def intHexByteStr(integerVariable):

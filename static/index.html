@@ -4,54 +4,246 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GW2 Random Build Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
-            --bg: #0b0f14;
-            --panel: #101721;
-            --muted: #7b8ba1;
-            --text: #e7eef7;
-            --accent: #4fa3ff;
-            --border: #1e2b3c;
+            --bg: #1a1b26;
+            --panel: #24283b;
+            --muted: #9aa5ce;
+            --text: #c0caf5;
+            --accent: #7aa2f7;
+            --border: #414868;
+            --success: #9ece6a;
+            --warning: #e0af68;
+            --error: #f7768e;
         }
         html, body { height: 100%; }
-        body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            background: linear-gradient(135deg, var(--bg) 0%, #2d3748 100%); 
+            color: var(--text);
+            line-height: 1.6;
+        }
         .container { max-width: 980px; margin: 0 auto; padding: 24px; }
-        h1 { font-size: 22px; font-weight: 600; margin: 0 0 16px; }
-        .title { font-size: 28px; font-weight: 700; letter-spacing: 0.2px; margin: 0 0 8px; }
-        .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
-        .controls label { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
-        select, input { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; min-width: 160px; }
-        button.primary { background: var(--accent); color: #051426; border: 0; border-radius: 8px; padding: 10px 14px; font-weight: 600; cursor: pointer; }
-        button.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 10px; cursor: pointer; }
-        .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+        h1 { 
+            font-size: 28px; 
+            font-weight: 700; 
+            margin: 0 0 16px; 
+            background: linear-gradient(45deg, var(--accent), #bb9af7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+        }
+        .title { font-size: 24px; font-weight: 600; letter-spacing: 0.2px; margin: 0 0 8px; color: var(--text); }
+        .controls { 
+            display: flex; 
+            gap: 16px; 
+            align-items: flex-end; 
+            flex-wrap: wrap; 
+            margin-bottom: 24px;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(36, 40, 59, 0.8);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(65, 72, 104, 0.3);
+        }
+        .controls label { 
+            font-size: 14px; 
+            color: var(--muted); 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px;
+            font-weight: 500;
+        }
+        select, input { 
+            background: rgba(26, 27, 38, 0.8); 
+            color: var(--text); 
+            border: 2px solid var(--border); 
+            border-radius: 12px; 
+            padding: 12px 16px; 
+            min-width: 160px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(122, 162, 247, 0.2);
+        }
+        button.primary { 
+            background: linear-gradient(45deg, var(--accent), #bb9af7); 
+            color: white; 
+            border: 0; 
+            border-radius: 12px; 
+            padding: 12px 20px; 
+            font-weight: 600; 
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(122, 162, 247, 0.3);
+        }
+        button.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(122, 162, 247, 0.4);
+        }
+        button.ghost { 
+            background: rgba(36, 40, 59, 0.6); 
+            border: 2px solid var(--border); 
+            color: var(--text); 
+            border-radius: 12px; 
+            padding: 10px 16px; 
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        button.ghost:hover {
+            background: rgba(36, 40, 59, 0.8);
+            border-color: var(--accent);
+            transform: translateY(-1px);
+        }
+                 .card { 
+             background: rgba(36, 40, 59, 0.9); 
+             border: 1px solid var(--border); 
+             border-radius: 20px; 
+             padding: 24px;
+             backdrop-filter: blur(10px);
+             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+             width: 600px;
+         }
         .row { display: flex; align-items: center; gap: 12px; }
         .between { justify-content: space-between; }
-        .skillbar { display: grid; grid-template-columns: repeat(5, 56px); gap: 8px; align-items: center; }
-        .skill { width: 56px; height: 56px; border-radius: 8px; background: #0e141b; border: 1px solid var(--border); display: grid; place-items: center; overflow: hidden; }
+        .skillbar { 
+            display: grid; 
+            grid-template-columns: repeat(5, 64px); 
+            gap: 12px; 
+            align-items: center;
+            margin: 20px 0;
+        }
+        .skill { 
+            width: 64px; 
+            height: 64px; 
+            border-radius: 16px; 
+            background: rgba(26, 27, 38, 0.8); 
+            border: 2px solid var(--border); 
+            display: grid; 
+            place-items: center; 
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .skill:hover {
+            transform: scale(1.05);
+            border-color: var(--accent);
+            box-shadow: 0 4px 15px rgba(122, 162, 247, 0.3);
+        }
         .skill img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .skill[title=""] { opacity: 0.45; }
-        .meta { color: var(--muted); font-size: 12px; }
-        .stack { display: grid; gap: 8px; }
-        .grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
-        .copy { display: inline-flex; align-items: center; gap: 8px; background: #0e141b; border: 1px solid var(--border); padding: 8px 10px; border-radius: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+        .meta { color: var(--muted); font-size: 14px; font-weight: 500; }
+        .stack { display: grid; gap: 12px; }
+                 .grid { display: grid; gap: 20px; grid-template-columns: 1fr; justify-items: center; }
+        .copy { 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 8px; 
+            background: rgba(26, 27, 38, 0.8); 
+            border: 2px solid var(--border); 
+            padding: 10px 14px; 
+            border-radius: 12px; 
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+        .copy:hover {
+            border-color: var(--success);
+            background: rgba(158, 206, 106, 0.1);
+        }
         .debug { margin-top: 16px; }
-        .specs { display: grid; gap: 8px; }
-        .spec { display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: center; }
-        .spec .name { font-size: 13px; }
+        .specs { display: grid; gap: 12px; }
+        .spec { 
+            display: grid; 
+            grid-template-columns: 32px 1fr; 
+            gap: 12px; 
+            align-items: center;
+            padding: 12px;
+            background: rgba(26, 27, 38, 0.5);
+            border-radius: 12px;
+            border: 1px solid rgba(65, 72, 104, 0.3);
+        }
+        .spec .name { font-size: 14px; font-weight: 500; color: var(--text); }
         .traits { display: inline-grid; grid-auto-flow: column; gap: 6px; }
-        .trait { width: 22px; height: 22px; border-radius: 4px; background: #0e141b; border: 1px solid var(--border); display: grid; place-items: center; font-size: 12px; color: var(--muted); overflow: hidden; }
-        .weapons { display: grid; gap: 8px; align-items: center; }
-        .weapon { display: inline-flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: #0e141b; font-size: 12px; color: var(--muted); white-space: nowrap; }
-        .sigils { display: inline-flex; gap: 6px; }
-        .sigil { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-        .sigil img { width: 18px; height: 18px; border-radius: 4px; }
-        .traits-grid { display: grid; gap: 4px; margin-top: 6px; }
-        .traits-row { display: grid; grid-template-columns: repeat(3, 22px); gap: 10px; align-items: center; }
-        .cell { width: 22px; height: 22px; border-radius: 4px; border: 1px solid var(--border); background: #0e141b; display: grid; place-items: center; overflow: hidden; }
-        .cell img { width: 22px; height: 22px; display: block; }
+        .trait { width: 22px; height: 22px; border-radius: 6px; background: #0e141b; border: 1px solid var(--border); display: grid; place-items: center; font-size: 12px; color: var(--muted); overflow: hidden; }
+        .weapons { display: grid; gap: 12px; align-items: center; }
+        .weapon { 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 10px 14px; 
+            border: 2px solid var(--border); 
+            border-radius: 12px; 
+            background: rgba(26, 27, 38, 0.6); 
+            font-size: 13px; 
+            color: var(--muted); 
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+        .weapon:hover {
+            border-color: var(--warning);
+            background: rgba(224, 175, 104, 0.1);
+        }
+        .sigils { display: inline-flex; gap: 8px; }
+        .sigil { 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+            font-size: 12px; 
+            color: var(--muted);
+            padding: 4px 8px;
+            background: rgba(26, 27, 38, 0.8);
+            border-radius: 8px;
+        }
+        .sigil img { width: 20px; height: 20px; border-radius: 6px; }
+        .traits-grid { display: grid; gap: 6px; margin-top: 8px; }
+        .traits-row { display: grid; grid-template-columns: repeat(3, 24px); gap: 12px; align-items: center; }
+        .cell { 
+            width: 24px; 
+            height: 24px; 
+            border-radius: 8px; 
+            border: 2px solid var(--border); 
+            background: rgba(26, 27, 38, 0.8); 
+            display: grid; 
+            place-items: center; 
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .cell:hover {
+            transform: scale(1.1);
+        }
+        .cell img { width: 24px; height: 24px; display: block; }
         .cell.off img { filter: grayscale(100%); opacity: 0.35; }
-        .cell.on { outline: 1px solid var(--accent); outline-offset: -1px; }
+        .cell.on { 
+            outline: 2px solid var(--accent); 
+            outline-offset: -2px;
+            box-shadow: 0 0 10px rgba(122, 162, 247, 0.4);
+        }
         .hidden { display: none; }
+        
+        /* Cute animations */
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(122, 162, 247, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(122, 162, 247, 0.6); }
+        }
+        
+        .card {
+            animation: glow 3s ease-in-out infinite;
+        }
         
         @media (min-width: 880px) { .grid { grid-template-columns: 1fr 320px; } }
     </style>
@@ -161,6 +353,14 @@
             const data = await res.json();
             // Show result area now that we have data
             document.getElementById('result').classList.remove('hidden');
+            
+            // Update subtitle with profession and specialization
+            const subtitleEl = document.getElementById('build-subtitle');
+            const specName = spec || 'Core';
+            subtitleEl.textContent = `${data.profession || profession || 'Random'} - ${specName}`;
+            
+            // Show screenshot button
+            document.getElementById('screenshot').style.display = '';
 
             // Build title from first line of text
             const buildName = (data.text || '').split('\n')[0]?.trim() || '';
@@ -174,7 +374,8 @@
             // Render skills row
             const skills = data.skills || [];
             const ids = ['heal','util1','util2','util3','elite'];
-            document.getElementById('build-title').textContent = `${data.profession || ''}`;
+            // Clear build-title since we're not using it for profession name anymore
+            document.getElementById('build-title').textContent = '';
             for (let i = 0; i < 5; i++) {
                 const box = document.getElementById(ids[i]);
                 box.innerHTML = '';
@@ -267,15 +468,106 @@
                 weaponsWrap.appendChild(row);
             }
 
-            // Prefix/Amulet icon (PvP)
-            const prefixIcon = data.amulet_icon || await resolveAmuletIconFromText(data.text || '');
-            const titleEl = document.getElementById('build-title');
-            if (prefixIcon) {
-                const img = document.createElement('img'); img.src = prefixIcon; img.alt = 'Amulet'; img.width = 36; img.height = 36; img.style.borderRadius = '8px'; img.style.verticalAlign = 'middle'; img.style.marginRight = '10px';
-                titleEl.innerHTML = '';
-                titleEl.appendChild(img);
-                const span = document.createElement('span'); span.textContent = `${data.profession || ''}`; titleEl.appendChild(span);
-            }
+                                       // Prefix/Amulet, Rune, and Relic (PvP) - moved to weapons section
+              const prefixIcon = data.amulet_icon || await resolveAmuletIconFromText(data.text || '');
+              if (prefixIcon) {
+                  // Create amulet element to be added to weapons section
+                  const amuletEl = document.createElement('div');
+                  amuletEl.className = 'weapon';
+                  amuletEl.style.alignItems = 'center';
+                  amuletEl.style.gap = '8px';
+                  
+                  const img = document.createElement('img'); 
+                  img.src = prefixIcon; 
+                  img.alt = 'Amulet'; 
+                  img.width = 48; 
+                  img.height = 48; 
+                  img.style.borderRadius = '12px';
+                  
+                                     const amuletContainer = document.createElement('div');
+                   amuletContainer.style.display = 'flex';
+                   amuletContainer.style.flexDirection = 'column';
+                   amuletContainer.style.gap = '2px';
+                   
+                   const amuletName = document.createElement('div');
+                   amuletName.textContent = data.amulet_name ? `${data.amulet_name} Amulet` : 'PvP Amulet';
+                   amuletName.style.fontSize = '13px';
+                   amuletName.style.color = 'var(--text)';
+                   amuletName.style.fontWeight = '500';
+                   
+                   amuletContainer.appendChild(amuletName);
+                  
+                  amuletEl.appendChild(img);
+                  amuletEl.appendChild(amuletContainer);
+                  
+                  // Add to weapons section
+                  const weaponsWrap = document.getElementById('weapons');
+                  weaponsWrap.appendChild(amuletEl);
+              }
+             
+                           // Add rune and relic display
+              if (data.rune_name || data.relic_name) {
+                  const runeRelicEl = document.createElement('div');
+                  runeRelicEl.className = 'weapon';
+                  runeRelicEl.style.alignItems = 'center';
+                  runeRelicEl.style.gap = '16px';
+                  
+                  if (data.rune_name) {
+                      const runeContainer = document.createElement('div');
+                      runeContainer.style.display = 'flex';
+                      runeContainer.style.alignItems = 'center';
+                      runeContainer.style.gap = '8px';
+                      
+                      if (data.rune_icon) {
+                          const runeImg = document.createElement('img');
+                          runeImg.src = data.rune_icon;
+                          runeImg.alt = `Rune of ${data.rune_name}`;
+                          runeImg.width = 32;
+                          runeImg.height = 32;
+                          runeImg.style.borderRadius = '8px';
+                          runeContainer.appendChild(runeImg);
+                      }
+                      
+                      const runeLabel = document.createElement('div');
+                      runeLabel.textContent = `Rune of ${data.rune_name}`;
+                      runeLabel.style.fontSize = '13px';
+                      runeLabel.style.color = 'var(--muted)';
+                      runeContainer.appendChild(runeLabel);
+                      
+                      runeRelicEl.appendChild(runeContainer);
+                  }
+                  
+                  if (data.relic_name) {
+                      const relicContainer = document.createElement('div');
+                      relicContainer.style.display = 'flex';
+                      relicContainer.style.alignItems = 'center';
+                      relicContainer.style.gap = '8px';
+                      
+                      if (data.relic_icon) {
+                          const relicImg = document.createElement('img');
+                          relicImg.src = data.relic_icon;
+                          relicImg.alt = `Relic of ${data.relic_name}`;
+                          relicImg.width = 32;
+                          relicImg.height = 32;
+                          relicImg.style.borderRadius = '8px';
+                          relicContainer.appendChild(relicImg);
+                      }
+                      
+                      const relicLabel = document.createElement('div');
+                      relicLabel.textContent = `Relic of ${data.relic_name}`;
+                      relicLabel.style.fontSize = '13px';
+                      relicLabel.style.color = 'var(--muted)';
+                      relicContainer.appendChild(relicLabel);
+                      
+                      runeRelicEl.appendChild(relicContainer);
+                  }
+                  
+                  // Add to weapons section
+                  const weaponsWrap = document.getElementById('weapons');
+                  weaponsWrap.appendChild(runeRelicEl);
+              }
+
+              
 
             // Done loading
             goBtn.disabled = false; goBtn.textContent = 'Generate';
@@ -287,10 +579,99 @@
             navigator.clipboard.writeText(text);
         }
 
+                 async function takeScreenshot() {
+             try {
+                 const buildCard = document.querySelector('#result .card');
+                 if (!buildCard) return;
+                 
+                 // Use html2canvas if available, otherwise fallback to browser screenshot
+                 if (typeof html2canvas !== 'undefined') {
+                     const canvas = await html2canvas(buildCard, {
+                         backgroundColor: '#1a1b26',
+                         scale: 2,
+                         useCORS: true,
+                         allowTaint: true
+                     });
+                    
+                    // Convert canvas to blob and copy to clipboard
+                    canvas.toBlob(async (blob) => {
+                        try {
+                            const clipboardItem = new ClipboardItem({
+                                'image/png': blob
+                            });
+                            await navigator.clipboard.write([clipboardItem]);
+                            
+                            // Show success feedback
+                            const btn = document.getElementById('screenshot');
+                            const originalText = btn.textContent;
+                            btn.textContent = '✅ Copied!';
+                            btn.style.background = 'linear-gradient(45deg, var(--success), #9ece6a)';
+                            btn.style.color = 'white';
+                            btn.style.borderColor = 'var(--success)';
+                            
+                            setTimeout(() => {
+                                btn.textContent = originalText;
+                                btn.style.background = '';
+                                btn.style.color = '';
+                                btn.style.borderColor = '';
+                            }, 2000);
+                        } catch (clipboardError) {
+                            console.error('Clipboard write failed:', clipboardError);
+                            // Fallback to download if clipboard fails
+                            const link = document.createElement('a');
+                            link.download = `gw2-build-${Date.now()}.png`;
+                            link.href = canvas.toDataURL();
+                            link.click();
+                        }
+                    }, 'image/png');
+                } else {
+                    // Fallback: try to use browser's native screenshot API
+                    if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+                        const stream = await navigator.mediaDevices.getDisplayMedia({
+                            preferCurrentTab: true
+                        });
+                        const track = stream.getVideoTracks()[0];
+                        const imageCapture = new ImageCapture(track);
+                        const bitmap = await imageCapture.grabFrame();
+                        
+                        const canvas = document.createElement('canvas');
+                        canvas.width = bitmap.width;
+                        canvas.height = bitmap.height;
+                        const context = canvas.getContext('2d');
+                        context.drawImage(bitmap, 0, 0);
+                        
+                        // Try to copy to clipboard first
+                        try {
+                            canvas.toBlob(async (blob) => {
+                                const clipboardItem = new ClipboardItem({
+                                    'image/png': blob
+                                });
+                                await navigator.clipboard.write([clipboardItem]);
+                            });
+                        } catch (clipboardError) {
+                            // Fallback to download
+                            const link = document.createElement('a');
+                            link.download = `gw2-build-${Date.now()}.png`;
+                            link.href = canvas.toDataURL();
+                            link.click();
+                        }
+                        
+                        track.stop();
+                    } else {
+                        alert('Screenshot not supported in this browser. Try using browser dev tools or a screenshot extension.');
+                    }
+                }
+            } catch (error) {
+                console.error('Screenshot failed:', error);
+                alert('Screenshot failed. Try using browser dev tools or a screenshot extension.');
+            }
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
             loadProfessions();
             document.getElementById('go').addEventListener('click', generate);
             document.getElementById('copy').addEventListener('click', copyChat);
+            document.getElementById('screenshot').addEventListener('click', takeScreenshot);
             const specWrap = document.getElementById('spec-wrap');
             specWrap.classList.add('hidden');
             document.getElementById('profession').addEventListener('change', async (e)=> {
@@ -313,11 +694,13 @@
                 <select id="spec"></select>
             </label>
             <button id="go" class="primary">Generate</button>
+            <button id="screenshot" class="ghost" style="display: none;">📸 Copy Screenshot</button>
         </div>
 
         <div id="result" class="grid hidden">
             <div class="card stack">
                 <div id="build-name" class="title">&nbsp;</div>
+                <div id="build-subtitle" class="meta" style="margin-bottom: 16px; font-size: 16px; color: var(--accent); font-weight: 600; text-shadow: 0 0 10px rgba(122, 162, 247, 0.5);">&nbsp;</div>
                 <div class="row between">
                     <div id="build-title" class="meta">&nbsp;</div>
                     <div class="row">
