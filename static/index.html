@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GW2 Random Build Generator</title>
+    <style>
+        :root {
+            --bg: #0b0f14;
+            --panel: #101721;
+            --muted: #7b8ba1;
+            --text: #e7eef7;
+            --accent: #4fa3ff;
+            --border: #1e2b3c;
+        }
+        html, body { height: 100%; }
+        body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+        .container { max-width: 980px; margin: 0 auto; padding: 24px; }
+        h1 { font-size: 22px; font-weight: 600; margin: 0 0 16px; }
+        .title { font-size: 28px; font-weight: 700; letter-spacing: 0.2px; margin: 0 0 8px; }
+        .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+        .controls label { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
+        select, input { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; min-width: 160px; }
+        button.primary { background: var(--accent); color: #051426; border: 0; border-radius: 8px; padding: 10px 14px; font-weight: 600; cursor: pointer; }
+        button.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+        .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+        .row { display: flex; align-items: center; gap: 12px; }
+        .between { justify-content: space-between; }
+        .skillbar { display: grid; grid-template-columns: repeat(5, 56px); gap: 8px; align-items: center; }
+        .skill { width: 56px; height: 56px; border-radius: 8px; background: #0e141b; border: 1px solid var(--border); display: grid; place-items: center; overflow: hidden; }
+        .skill img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .skill[title=""] { opacity: 0.45; }
+        .meta { color: var(--muted); font-size: 12px; }
+        .stack { display: grid; gap: 8px; }
+        .grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
+        .copy { display: inline-flex; align-items: center; gap: 8px; background: #0e141b; border: 1px solid var(--border); padding: 8px 10px; border-radius: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+        .debug { margin-top: 16px; }
+        .specs { display: grid; gap: 8px; }
+        .spec { display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: center; }
+        .spec .name { font-size: 13px; }
+        .traits { display: inline-grid; grid-auto-flow: column; gap: 6px; }
+        .trait { width: 22px; height: 22px; border-radius: 4px; background: #0e141b; border: 1px solid var(--border); display: grid; place-items: center; font-size: 12px; color: var(--muted); overflow: hidden; }
+        .weapons { display: grid; gap: 8px; align-items: center; }
+        .weapon { display: inline-flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: #0e141b; font-size: 12px; color: var(--muted); white-space: nowrap; }
+        .sigils { display: inline-flex; gap: 6px; }
+        .sigil { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+        .sigil img { width: 18px; height: 18px; border-radius: 4px; }
+        .traits-grid { display: grid; gap: 4px; margin-top: 6px; }
+        .traits-row { display: grid; grid-template-columns: repeat(3, 22px); gap: 10px; align-items: center; }
+        .cell { width: 22px; height: 22px; border-radius: 4px; border: 1px solid var(--border); background: #0e141b; display: grid; place-items: center; overflow: hidden; }
+        .cell img { width: 22px; height: 22px; display: block; }
+        .cell.off img { filter: grayscale(100%); opacity: 0.35; }
+        .cell.on { outline: 1px solid var(--accent); outline-offset: -1px; }
+        .hidden { display: none; }
+        
+        @media (min-width: 880px) { .grid { grid-template-columns: 1fr 320px; } }
+    </style>
+    <script>
+        async function loadProfessions() {
+            const res = await fetch('/api/professions');
+            const data = await res.json();
+            const sel = document.getElementById('profession');
+            sel.innerHTML = '<option value="">Any</option>';
+            data.professions.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p; opt.textContent = p; sel.appendChild(opt);
+            });
+        }
+
+        async function loadSpecsFor(prof) {
+            const specSel = document.getElementById('spec');
+            specSel.innerHTML = '<option value="">Any</option>';
+            if (!prof) return;
+            const res = await fetch(`/api/specs?profession=${encodeURIComponent(prof)}`);
+            const data = await res.json();
+            (data.specs || []).forEach(s => { const opt = document.createElement('option'); opt.value = s; opt.textContent = s; specSel.appendChild(opt); });
+        }
+
+        const _cache = new Map();
+        function normalizeName(s){
+            return (s||'').toLowerCase().replace(/["'`“”‘’!?.:,]/g,'').replace(/\s+/g,' ').trim();
+        }
+        async function fetchBySearch(collection, name) {
+            const key = `${collection}|${name}`;
+            if (_cache.has(key)) return _cache.get(key);
+            const searchUrl = `https://api.guildwars2.com/v2/${collection}?search=${encodeURIComponent(name)}&lang=en`;
+            const idsRes = await fetch(searchUrl);
+            const ids = await idsRes.json();
+            if (!Array.isArray(ids) || ids.length === 0) { _cache.set(key, []); return []; }
+            const detailUrl = `https://api.guildwars2.com/v2/${collection}?ids=${ids.slice(0, 50).join(',')}&lang=en`;
+            const detRes = await fetch(detailUrl);
+            const details = await detRes.json();
+            const arr = Array.isArray(details) ? details : [];
+            _cache.set(key, arr);
+            return arr;
+        }
+
+        async function fetchSkillIcon(name) {
+            if (!name) return '';
+            try {
+                const details = await fetchBySearch('skills', name);
+                if (!details.length) return '';
+                const target = normalizeName(name);
+                let match = details.find(s => normalizeName(s.name) === target);
+                if (!match) match = details.find(s => normalizeName(s.name).includes(target));
+                return (match?.icon || details[0]?.icon) || '';
+            } catch { return ''; }
+        }
+
+        async function fetchSpecializationIcon(name) {
+            if (!name) return '';
+            try {
+                const details = await fetchBySearch('specializations', name);
+                if (!details.length) return '';
+                const exact = details.find(s => s.name === name);
+                return (exact?.icon || details[0]?.icon) || '';
+            } catch { return ''; }
+        }
+
+        async function fetchSpecializationDetail(name) {
+            try {
+                const details = await fetchBySearch('specializations', name);
+                if (!details.length) return null;
+                return details.find(s => s.name === name) || details[0];
+            } catch { return null; }
+        }
+
+        async function fetchTraitIcons(ids) {
+            if (!ids.length) return [];
+            const url = `https://api.guildwars2.com/v2/traits?ids=${ids.join(',')}&lang=en`;
+            try { const res = await fetch(url); const data = await res.json(); return Array.isArray(data) ? data.map(t => t.icon || '') : []; } catch { return []; }
+        }
+
+        async function fetchPvpAmulets() {
+            try { const res = await fetch('https://api.guildwars2.com/v2/pvp/amulets?ids=all&lang=en'); return await res.json(); } catch { return []; }
+        }
+        async function resolveAmuletIconFromText(text) {
+            const m = text.match(/^(.*?) Amulet, Rune of/i);
+            if (!m) return '';
+            const base = m[1].trim();
+            const amulets = await fetchPvpAmulets();
+            const targetName = `${base} Amulet`;
+            const found = Array.isArray(amulets) ? amulets.find(a => a.name === targetName) : null;
+            return found?.icon || '';
+        }
+
+        async function fetchWeaponIcon(weapon) {
+            // No direct API for weapon icons; use static placeholders for now
+            return '';
+        }
+
+        async function generate() {
+            const profession = document.getElementById('profession').value;
+            const spec = document.getElementById('spec').value;
+            const goBtn = document.getElementById('go');
+            goBtn.disabled = true; goBtn.textContent = 'Generating…';
+            const params = new URLSearchParams();
+            if (profession) params.set('profession', profession);
+            if (spec) params.set('spec', spec);
+            const res = await fetch(`/api/build?${params.toString()}`);
+            const data = await res.json();
+            // Show result area now that we have data
+            document.getElementById('result').classList.remove('hidden');
+
+            // Build title from first line of text
+            const buildName = (data.text || '').split('\n')[0]?.trim() || '';
+            const titleElTop = document.getElementById('build-name');
+            titleElTop.textContent = buildName;
+
+            // Render chat link
+            const chat = document.getElementById('chat');
+            chat.textContent = data.chat_link || '';
+
+            // Render skills row
+            const skills = data.skills || [];
+            const ids = ['heal','util1','util2','util3','elite'];
+            document.getElementById('build-title').textContent = `${data.profession || ''}`;
+            for (let i = 0; i < 5; i++) {
+                const box = document.getElementById(ids[i]);
+                box.innerHTML = '';
+                box.style.display = '';
+            }
+            // Fetch icons in parallel
+            // use server-provided icons first for accuracy, fallback to client search
+            let icons = Array.isArray(data.skills_icons) ? data.skills_icons : [];
+            if (icons.length !== skills.length) {
+                icons = await Promise.all(skills.map(n => fetchSkillIcon(n)));
+            }
+            // Revenant: show only two legend icons
+            if ((data.profession || '') === 'Revenant') {
+                const legendsLine = (data.text || '').split('\n').find(line => /\s\/\s/.test(line) && !/Sigil of/.test(line)) || '';
+                const parts = legendsLine.split('/').map(s => s.trim()).filter(Boolean);
+                const legendIcons = Array.isArray(data.legend_icons) ? data.legend_icons : [];
+                const boxes = [document.getElementById('heal'), document.getElementById('util1')];
+                for (let i = 0; i < boxes.length; i++) {
+                    boxes[i].innerHTML = '';
+                    const img = document.createElement('img'); img.src = legendIcons[i] || ''; img.alt = parts[i] || ''; boxes[i].appendChild(img);
+                }
+                // hide remaining boxes
+                for (let i = 2; i < ids.length; i++) document.getElementById(ids[i]).style.display = 'none';
+            } else {
+                for (let i = 0; i < 5; i++) {
+                    const box = document.getElementById(ids[i]);
+                    const name = skills[i] || '';
+                    const icon = icons[i] || '';
+                    if (icon) {
+                        const img = document.createElement('img');
+                        img.src = icon; img.alt = name; box.title = name; box.appendChild(img);
+                    } else {
+                        box.title = name;
+                    }
+                }
+            }
+
+            // Render specializations + trait choices
+            const specsWrap = document.getElementById('specs');
+            specsWrap.innerHTML = '';
+            const specs = data.specializations || [];
+            for (const s of specs) {
+                const row = document.createElement('div'); row.className = 'spec';
+                const left = document.createElement('div');
+                const right = document.createElement('div'); right.className = 'row between';
+                const nameEl = document.createElement('div'); nameEl.className = 'name'; nameEl.textContent = s.name || '';
+
+                const triad = (s.traits || []).map(x => parseInt(x, 10));
+                // Build 3x3 trait matrix using server-provided icons; grey out non-selected
+                const matrix = (s.trait_matrix || [["","",""],["","",""],["","",""]]);
+                const grid = document.createElement('div'); grid.className = 'traits-grid';
+                // Transpose: swap rows/columns for display
+                for (let r = 0; r < 3; r++) {
+                    const row = document.createElement('div'); row.className = 'traits-row';
+                    for (let c = 0; c < 3; c++) {
+                        const cell = document.createElement('div'); cell.className = 'cell';
+                        const img = document.createElement('img'); img.src = (matrix[c] && matrix[c][r]) || ''; cell.appendChild(img);
+                        const selected = triad[c] === (r+1);
+                        cell.classList.add(selected ? 'on' : 'off');
+                        row.appendChild(cell);
+                    }
+                    grid.appendChild(row);
+                }
+
+                const specIcon = s.icon || await fetchSpecializationIcon(s.name);
+                if (specIcon) { const img = document.createElement('img'); img.src = specIcon; img.alt = s.name; img.width = 28; img.height = 28; img.style.borderRadius = '6px'; left.appendChild(img); }
+
+                right.appendChild(grid);
+                row.appendChild(left); row.appendChild(right);
+                specsWrap.appendChild(row);
+            }
+
+            // Render weapons line (names; icons could be added if we host assets)
+            const weaponsWrap = document.getElementById('weapons');
+            weaponsWrap.innerHTML = '';
+            const weapons = data.weapons || [];
+            const weaponSigils = data.weapon_sigils || [];
+            for (let i = 0; i < weapons.length; i++) {
+                const row = document.createElement('div'); row.className = 'weapon';
+                const name = document.createElement('div'); name.textContent = weapons[i] || '';
+                const sigils = document.createElement('div'); sigils.className = 'sigils';
+                const set = weaponSigils[i] || [];
+                for (const s of set) {
+                    const sb = document.createElement('div'); sb.className = 'sigil';
+                    if (s.icon) { const img = document.createElement('img'); img.src = s.icon; img.alt = s.name; sb.appendChild(img); }
+                    const label = document.createElement('span'); label.textContent = s.name || ''; sb.appendChild(label);
+                    sigils.appendChild(sb);
+                }
+                row.appendChild(name); row.appendChild(sigils);
+                weaponsWrap.appendChild(row);
+            }
+
+            // Prefix/Amulet icon (PvP)
+            const prefixIcon = data.amulet_icon || await resolveAmuletIconFromText(data.text || '');
+            const titleEl = document.getElementById('build-title');
+            if (prefixIcon) {
+                const img = document.createElement('img'); img.src = prefixIcon; img.alt = 'Amulet'; img.width = 36; img.height = 36; img.style.borderRadius = '8px'; img.style.verticalAlign = 'middle'; img.style.marginRight = '10px';
+                titleEl.innerHTML = '';
+                titleEl.appendChild(img);
+                const span = document.createElement('span'); span.textContent = `${data.profession || ''}`; titleEl.appendChild(span);
+            }
+
+            // Done loading
+            goBtn.disabled = false; goBtn.textContent = 'Generate';
+        }
+
+        function copyChat() {
+            const text = document.getElementById('chat').textContent.trim();
+            if (!text) return;
+            navigator.clipboard.writeText(text);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadProfessions();
+            document.getElementById('go').addEventListener('click', generate);
+            document.getElementById('copy').addEventListener('click', copyChat);
+            const specWrap = document.getElementById('spec-wrap');
+            specWrap.classList.add('hidden');
+            document.getElementById('profession').addEventListener('change', async (e)=> {
+                const val = e.target.value;
+                if (!val) { specWrap.classList.add('hidden'); document.getElementById('spec').innerHTML = '<option value="">Any</option>'; return; }
+                specWrap.classList.remove('hidden');
+                await loadSpecsFor(val);
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>GW2 Random Build Generator</h1>
+        <div class="controls">
+            <label>Profession
+                <select id="profession"></select>
+            </label>
+            <label id="spec-wrap">Spec
+                <select id="spec"></select>
+            </label>
+            <button id="go" class="primary">Generate</button>
+        </div>
+
+        <div id="result" class="grid hidden">
+            <div class="card stack">
+                <div id="build-name" class="title">&nbsp;</div>
+                <div class="row between">
+                    <div id="build-title" class="meta">&nbsp;</div>
+                    <div class="row">
+                        <div class="copy" id="chat">&nbsp;</div>
+                        <button id="copy" class="ghost">Copy</button>
+                    </div>
+                </div>
+                <div class="skillbar">
+                    <div id="heal" class="skill" title=""></div>
+                    <div id="util1" class="skill" title=""></div>
+                    <div id="util2" class="skill" title=""></div>
+                    <div id="util3" class="skill" title=""></div>
+                    <div id="elite" class="skill" title=""></div>
+                </div>
+                <div class="row between">
+                    <div class="weapons" id="weapons"></div>
+                </div>
+                <div class="specs" id="specs"></div>
+            </div>
+            <div class="stack">
+                <!-- Placeholder for future: traits, weapons, gear visuals -->
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+
