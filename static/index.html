@@ -161,17 +161,22 @@
         }
         .debug { margin-top: 16px; }
         .specs { display: grid; gap: 12px; }
-        .spec { 
-            display: grid; 
-            grid-template-columns: 32px 1fr; 
-            gap: 12px; 
-            align-items: center;
-            padding: 12px;
-            background: rgba(26, 27, 38, 0.5);
-            border-radius: 12px;
-            border: 1px solid rgba(65, 72, 104, 0.3);
-        }
-        .spec .name { font-size: 14px; font-weight: 500; color: var(--text); }
+                 .spec { 
+             display: flex; 
+             flex-direction: column;
+             gap: 12px; 
+             padding: 12px;
+             background: rgba(26, 27, 38, 0.5);
+             border-radius: 12px;
+             border: 1px solid rgba(65, 72, 104, 0.3);
+         }
+         
+         .spec-header {
+             display: flex;
+             align-items: center;
+             gap: 12px;
+         }
+                 .spec .name { font-size: 18px; font-weight: 600; color: var(--text); }
         .traits { display: inline-grid; grid-auto-flow: column; gap: 6px; }
         .trait { width: 22px; height: 22px; border-radius: 6px; background: #0e141b; border: 1px solid var(--border); display: grid; place-items: center; font-size: 12px; color: var(--muted); overflow: hidden; }
         .weapons { display: grid; gap: 12px; align-items: center; }
@@ -204,7 +209,7 @@
             border-radius: 8px;
         }
         .sigil img { width: 20px; height: 20px; border-radius: 6px; }
-        .traits-grid { display: grid; gap: 6px; margin-top: 8px; }
+                 .traits-grid { display: grid; gap: 6px; margin-top: 8px; }
         .traits-row { display: grid; grid-template-columns: repeat(3, 24px); gap: 12px; align-items: center; }
         .cell { 
             width: 24px; 
@@ -214,12 +219,18 @@
             background: rgba(26, 27, 38, 0.8); 
             display: grid; 
             place-items: center; 
-            overflow: hidden;
+            overflow: visible; /* Changed from hidden to visible so tooltip can show */
             transition: all 0.3s ease;
             position: relative;
         }
         .cell:hover {
             transform: scale(1.1);
+        }
+        
+        /* Override hover effect for cells with tooltips to avoid conflicts */
+        .cell[data-tooltip]:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(122, 162, 247, 0.3);
         }
         .cell img { width: 24px; height: 24px; display: block; }
         .cell.off img { filter: grayscale(100%); opacity: 0.35; }
@@ -230,8 +241,13 @@
         }
         .hidden { display: none; }
         
-        /* Custom tooltip styling */
-        .cell[data-tooltip]:hover::after {
+        /* Custom tooltip styling - now handled by JavaScript */
+        .cell[data-tooltip] {
+            position: relative;
+        }
+        
+        /* Test tooltip for button */
+        button[data-tooltip]:hover::after {
             content: attr(data-tooltip);
             position: absolute;
             bottom: 100%;
@@ -239,42 +255,22 @@
             transform: translateX(-50%);
             background: linear-gradient(135deg, rgba(36, 40, 59, 0.98), rgba(26, 27, 38, 0.98));
             color: var(--text);
-            padding: 12px 16px;
-            border-radius: 12px;
-            font-size: 13px;
-            line-height: 1.4;
-            white-space: pre-line;
-            max-width: 280px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
             z-index: 1000;
             border: 1px solid rgba(122, 162, 247, 0.3);
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.4),
-                0 0 0 1px rgba(122, 162, 247, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
             pointer-events: none;
-            margin-bottom: 12px;
-            backdrop-filter: blur(10px);
-            font-weight: 500;
-            letter-spacing: 0.2px;
-            /* Remove any transition delay for immediate display */
-            transition: none;
+            margin-bottom: 8px;
+            white-space: nowrap;
         }
         
-        .cell[data-tooltip]:hover::before {
-            content: '';
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            border: 6px solid transparent;
-            border-top-color: rgba(36, 40, 59, 0.98);
-            z-index: 1000;
-            pointer-events: none;
-            margin-bottom: 6px;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-            /* Remove any transition delay for immediate display */
-            transition: none;
+        button[data-tooltip] {
+            position: relative;
         }
+        
+
         
         /* Cute animations */
         @keyframes bounce {
@@ -481,11 +477,10 @@
             const specsWrap = document.getElementById('specs');
             specsWrap.innerHTML = '';
             const specs = data.specializations || [];
-            for (const s of specs) {
-                const row = document.createElement('div'); row.className = 'spec';
-                const left = document.createElement('div');
-                const right = document.createElement('div'); right.className = 'row between';
-                const nameEl = document.createElement('div'); nameEl.className = 'name'; nameEl.textContent = s.name || '';
+                         for (const s of specs) {
+                 const row = document.createElement('div'); row.className = 'spec';
+                 const header = document.createElement('div'); header.className = 'spec-header';
+                 const nameEl = document.createElement('div'); nameEl.className = 'name'; nameEl.textContent = s.name || '';
 
                 const triad = (s.traits || []).map(x => parseInt(x, 10));
                 // Build 3x3 trait matrix using server-provided icons and descriptions; grey out non-selected
@@ -518,14 +513,95 @@
                             cell.appendChild(img);
                         }
                         
-                        // Add custom tooltip data attributes
-                        if (traitName || traitDescription) {
-                            let tooltipText = traitName;
-                            if (traitDescription) {
-                                tooltipText += '\n\n' + traitDescription;
+                        // Remove any default title attribute that might interfere
+                        cell.removeAttribute('title');
+                        
+                                                 // Add custom tooltip data attributes
+                         if (traitName || traitDescription) {
+                             // Clean up the text by removing angle brackets and their contents
+                             let cleanTraitName = traitName.replace(/<[^>]*>/g, '').trim();
+                             let cleanDescription = traitDescription.replace(/<[^>]*>/g, '').trim();
+                             
+                             let tooltipText = cleanTraitName;
+                             if (cleanDescription) {
+                                 tooltipText += '\n\n' + cleanDescription;
+                             }
+                             cell.setAttribute('data-tooltip', tooltipText);
+                         }
+                        
+                                                 // Add hover event listener for tooltip functionality
+                         cell.addEventListener('mouseenter', (e) => {
+                            
+                            // Remove any existing tooltip first
+                            if (cell.tooltipElement) {
+                                cell.tooltipElement.remove();
                             }
-                            cell.setAttribute('data-tooltip', tooltipText);
-                        }
+                            
+                                                         // Create tooltip element
+                             const tooltip = document.createElement('div');
+                             tooltip.className = 'custom-tooltip';
+                             
+                             // Split the tooltip text to make the title bold
+                             const tooltipText = cell.getAttribute('data-tooltip');
+                             const parts = tooltipText.split('\n\n');
+                             
+                             if (parts.length > 1) {
+                                 // Create bold title and normal description
+                                 const title = document.createElement('div');
+                                 title.style.fontWeight = 'bold';
+                                 title.style.marginBottom = '8px';
+                                 title.textContent = parts[0];
+                                 
+                                 const description = document.createElement('div');
+                                 description.textContent = parts[1];
+                                 
+                                 tooltip.appendChild(title);
+                                 tooltip.appendChild(description);
+                             } else {
+                                 // Just the title, make it bold
+                                 tooltip.style.fontWeight = 'bold';
+                                 tooltip.textContent = tooltipText;
+                             }
+                            
+                            // Apply styles individually to ensure they work
+                            tooltip.style.position = 'absolute';
+                            tooltip.style.bottom = '100%';
+                            tooltip.style.left = '50%';
+                            tooltip.style.transform = 'translateX(-50%)';
+                            tooltip.style.background = 'linear-gradient(135deg, rgba(36, 40, 59, 0.98), rgba(26, 27, 38, 0.98))';
+                            tooltip.style.color = 'var(--text)';
+                            tooltip.style.padding = '12px 16px';
+                            tooltip.style.borderRadius = '12px';
+                            tooltip.style.fontSize = '13px';
+                            tooltip.style.lineHeight = '1.4';
+                            tooltip.style.whiteSpace = 'pre-line';
+                            tooltip.style.width = 'max-content';
+                            tooltip.style.maxWidth = '300px';
+                            tooltip.style.minWidth = '200px';
+                            tooltip.style.zIndex = '9999';
+                                                         tooltip.style.border = '1px solid rgba(122, 162, 247, 0.3)';
+                            tooltip.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(122, 162, 247, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+                            tooltip.style.pointerEvents = 'none';
+                            tooltip.style.marginBottom = '12px';
+                            tooltip.style.backdropFilter = 'blur(10px)';
+                            tooltip.style.fontWeight = '500';
+                            tooltip.style.letterSpacing = '0.2px';
+                            tooltip.style.wordWrap = 'break-word';
+                            tooltip.style.overflowWrap = 'break-word';
+                            tooltip.style.hyphens = 'auto';
+                            
+                                                         // Add tooltip to cell
+                             cell.appendChild(tooltip);
+                             cell.tooltipElement = tooltip;
+                        });
+                        
+                                                 cell.addEventListener('mouseleave', () => {
+                             // Remove tooltip when mouse leaves
+                             if (cell.tooltipElement) {
+                                 cell.tooltipElement.remove();
+                                 cell.tooltipElement = null;
+                             }
+                         });
                         
                         const selected = triad[c] === (r+1);
                         cell.classList.add(selected ? 'on' : 'off');
@@ -534,31 +610,21 @@
                     grid.appendChild(row);
                 }
 
-                const specIcon = s.icon || await fetchSpecializationIcon(s.name);
-                if (specIcon) { 
-                    const img = document.createElement('img'); 
-                    img.src = specIcon; 
-                    img.alt = s.name; 
-                    img.width = 28; 
-                    img.height = 28; 
-                    img.style.borderRadius = '6px'; 
-                    left.appendChild(img); 
-                    
-                    // Add specialization name under the icon
-                    const nameUnderIcon = document.createElement('div');
-                    // Always show the actual specialization name under the icon
-                    nameUnderIcon.textContent = s.name;
-                    nameUnderIcon.style.fontSize = '11px';
-                    nameUnderIcon.style.color = 'var(--muted)';
-                    nameUnderIcon.style.textAlign = 'center';
-                    nameUnderIcon.style.marginTop = '4px';
-                    nameUnderIcon.style.fontWeight = '500';
-                    left.appendChild(nameUnderIcon);
-                }
-
-                right.appendChild(grid);
-                row.appendChild(left); row.appendChild(right);
-                specsWrap.appendChild(row);
+                                 const specIcon = s.icon || await fetchSpecializationIcon(s.name);
+                 if (specIcon) { 
+                     const img = document.createElement('img'); 
+                     img.src = specIcon; 
+                     img.alt = s.name; 
+                     img.width = 56; 
+                     img.height = 56; 
+                     img.style.borderRadius = '12px'; 
+                     header.appendChild(img); 
+                 }
+                 
+                 header.appendChild(nameEl);
+                 row.appendChild(header);
+                 row.appendChild(grid);
+                 specsWrap.appendChild(row);
             }
 
             // Render weapons line (names; icons could be added if we host assets)
@@ -806,7 +872,7 @@
             <label id="spec-wrap">Spec
                 <select id="spec"></select>
             </label>
-            <button id="go" class="primary">Generate</button>
+            <button id="go" class="primary" data-tooltip="Generate a random build">Generate</button>
             <button id="screenshot" class="ghost" style="display: none;">📸 Copy Screenshot</button>
         </div>
 
