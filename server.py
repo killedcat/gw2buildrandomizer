@@ -35,6 +35,7 @@ LEGEND_NAME_TO_ICON: Dict[str, str] = {
     "Scorchrazor": "https://render.guildwars2.com/file/6B3205EF5ED0802DB74BBF7F0CAE04FAA2089B74/1770592.png",
     "Ventari": "https://render.guildwars2.com/file/6CFF31B50AA00CAF3D35A02562964802B55AD292/1024105.png",
     "Alliance": "https://render.guildwars2.com/file/E1910F4C5C74E0B00AB262D2D3DBA3FB51BE90CA/2491626.png",
+    "Razah": "https://render.guildwars2.com/file/3FEE4B97282956F1F3654BE36119A0030E08C1D7/3680200.png",
 }
 
 

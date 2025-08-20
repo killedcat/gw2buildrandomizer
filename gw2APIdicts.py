@@ -84,7 +84,8 @@ legends_dict = {
     "Mallyx": 4,
     "Scorchrazor": 5,
     "Ventari": 6,
-    "Alliance": 7 
+    "Alliance": 7,
+    "Razah": 8 
 }
 
 '''

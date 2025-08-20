@@ -1,8 +1,17 @@
 import random
 import codecs
 import os
+import json
 from wonderwords import RandomWord
 from gw2APIdicts import *
+
+# Load skills_dict from skill_palette.json
+with open(os.path.join(os.path.dirname(__file__), "./dictionaries/skill_palette.json"), "r", encoding="utf-8") as f:
+    skills_dict = json.load(f)
+with open(os.path.join(os.path.dirname(__file__), "./dictionaries/pets.json"), "r", encoding="utf-8") as f:
+    pets_dict = json.load(f)
+with open(os.path.join(os.path.dirname(__file__), "./dictionaries/specializations.json"), "r", encoding="utf-8") as f:
+    specializations_dict = json.load(f)
 
 amulets = ["Assassin", "Avatar", "Berserker", "Carrion", "Demolisher", "Destroyer", "Grieving", "Marauder", "Paladin", "Rabid", "Rampager", "Sage", "Sinister", "Swashbuckler", "Valkyrie", "Wizard"]
 runes = ["Adventure", "Air", "Altruism", "Balthazar", "Divinity", "Dwayna", "Earth", "Evasion", "Exuberance", "Fire", "Grenth", "Hoelbrak", "Ice", "Infiltration", "Leadership", "Lyssa", "Melandru", "Orr", "Radiance", "Rage", "Rata Sum", "Resistance", "Sanctuary", "Scavenging", "Speed", "Strength", "Afflicted", "Aristocracy", "Baelfire", "Berserker", "Centaur", "Chronomancer", "Citadel", "Daredevil", "Deadeye", "Dolyak", "Dragonhunter", "Druid", "Eagle", "Elementalist", "Engineer", "Fighter", "Firebrand", "Flame Legion", "Flock", "Forge", "Grove", "Guardian", "Herald", "Holosmith", "Krait", "Lynx", "Mad King", "Mesmer", "Mirage", "Monk", "Necromancer", "Nightmare", "Ranger", "Reaper", "Renegade", "Revenant", "Scholar", "Scrapper", "Soldier", "Soulbeast", "Spellbreaker", "Sunless", "Svanir", "Tempest", "Thief", "Trapper", "Traveler", "Undead", "Warrior", "Water", "Weaver", "Wurm", "Thorns", "Vampirism"]
@@ -31,7 +40,7 @@ class Warrior:
     def __init__(self):
         self.professionname = "Warrior"
         self.core_specs = ["Strength", "Arms", "Defense", "Tactics", "Discipline"]
-        self.elite_specs = ["Berserker", "Spellbreaker", "Bladesworn"]
+        self.elite_specs = ["Berserker", "Spellbreaker", "Bladesworn", "Paragon"]
         # Note: two-handed weapons must be in both the mainhand list and the offhand list (because i'm too lazy to figure out a more elegant way to do this)
         self.mainhands = ["Axe", "mace", "sword", "Greatsword", "Hammer", "Longbow", "Rifle", "Dagger", "Staff", "Spear"]
         self.offhands = ["Shield", "Warhorn", "Axe", "Mace", "Sword", "Pistol", "Dagger"]
@@ -45,6 +54,7 @@ class Warrior:
         self.elite_skill_list = ["Battle Standard", "Rampage", "Signet of Rage"]
         # Format: {ELITE_SPEC: [spec heal, [spec utilities], spec elite]}
         self.elite_spec_skills = {
+            "Paragon": ['"We Shall Return!"', ['"Find Their Weakness!"', '"Never Surrender!"', '"Brace Yourselves!"', '"On Your Knees!"'], '"We Will Never Yield!"'],
             "Bladesworn": ["Combat Stimulant", ["Flow Stabilizer", "Overcharged Cartridges", "Electric Fence", "Dragonspike Mine"], "Tactical Reload"], 
             "Berserker": ["Blood Reckoning", ["Outrage", "Shattering Blow", "Sundering Leap", "Wild Blow"], "Head Butt"], 
             "Spellbreaker": ["Natural Healing", ["Sight beyond Sight", "Featherfoot Grace", "Imminent Threat", "Break Enchantments"], "Winds of Disenchantment"] 
@@ -55,7 +65,7 @@ class Mesmer:
     def __init__(self):
         self.professionname = "Mesmer"
         self.core_specs = ["Domination", "Dueling", "Chaos", "Inspiration", "Illusions"]
-        self.elite_specs = ["Mirage", "Chronomancer", "Virtuoso"]
+        self.elite_specs = ["Mirage", "Chronomancer", "Virtuoso", "Troubadour"]
         # Note: two-handed weapons must be in both the mainhand list and the offhand list (because i'm too lazy to figure out a more elegant way to do this)
         self.mainhands = ["Axe", "Sword", "Scepter", "Greatsword", "Staff", "Dagger", "Rifle", "Spear"]
         self.offhands = ["Sword", "Pistol", "Focus", "Shield", "Torch"]
@@ -69,6 +79,7 @@ class Mesmer:
         self.elite_skill_list = ["Time Warp", "Mass Invisibility", "Signet of Humility"]
         # Format: {ELITE_SPEC: [spec heal, [spec utilities], spec elite]}
         self.elite_spec_skills = {
+            "Troubadour": ["Tale of the Second Scion", ["Tale of the Soulkeeper", "Tale of the Honorable Rogue", "Tale of the Valiant Marshal", "Tale of the Tortured Mastermind"], "Tale of the August Queen"],
             "Chronomancer": ["Well of Eternity", ["Well of Action", "Well of Calamity", "Well of Precognition", "Well of Senility"], "Gravity Well"], 
             "Mirage": ["False Oasis", ["Crystal Sands", "Illusionary Ambush", "Mirage Advance", "Sand through Glass"], "Jaunt"], 
             "Virtuoso": ["Twin Blade Restoration", ["Blade Renewal", "Rain of Swords", "Psychic Force", "Sword of Decimation"], "Thousand Cuts"] 
@@ -79,7 +90,7 @@ class Thief:
     def __init__(self):
         self.professionname = "Thief"
         self.core_specs = ["Deadly Arts","Critical Strikes","Shadow Arts","Acrobatics","Trickery"]
-        self.elite_specs = ["Daredevil","Deadeye","Specter"]
+        self.elite_specs = ["Daredevil","Deadeye","Specter","Antiquary"]
         # Note: two-handed weapons must be in both the mainhand list and the offhand list (because i'm too lazy to figure out a more elegant way to do this)
         self.mainhands = ["Rifle", "Shortbow","Staff","Dagger","Pistol","Sword","Scepter", "Axe", "Spear"]
         self.offhands = ["Dagger","Pistol"]
@@ -89,6 +100,7 @@ class Thief:
         self.elite_skill_list = ["Thieves Guild","Basilisk Venom","Dagger Storm"]
         # Format: {ELITE_SPEC: [spec heal, [spec utilities], spec elite]}
         self.elite_spec_skills = {
+            "Antiquary": ["Antivenom Draught", ["Stone Summit Cannon", "Inquest Portal Device", "Emergency Jade Shield", "Canach-Coin Toss"], "Skritt Scuffle"],
             "Daredevil": ["Channeled Vigor", ["Bandit's Defense","Distracting Daggers","Fist Flurry","Impairing Daggers"], "Impact Strike"], 
             "Deadeye": ["Malicious Restoration", ["Binding Shadow","Mercy","Shadow Flare","Shadow Gust"], "Shadow Meld"], 
             "Specter": ["Well of Gloom", ["Well of Bounty","Well of Silence","Well of Sorrow","Well of Tears"], "Shadowfall"] 
@@ -100,7 +112,7 @@ class Guardian:
     def __init__(self):
         self.professionname = "Guardian"
         self.core_specs = ["Zeal", "Radiance", "Valor", "Honor", "Virtues"]
-        self.elite_specs = ["Dragonhunter", "Firebrand", "Willbender"]
+        self.elite_specs = ["Dragonhunter", "Firebrand", "Willbender", "Luminary"]
         # Note: two-handed weapons must be in both the mainhand list and the offhand list (because i'm too lazy to figure out a more elegant way to do this)
         self.mainhands = ["Axe", "Sword", "Scepter", "Greatsword", "Staff", "Longbow", "Mace", "Pistol", "Spear"]
         self.offhands = ["Sword", "Focus", "Shield", "Torch", "Pistol"]
@@ -110,6 +122,7 @@ class Guardian:
         self.elite_skill_list = ['"Feel My Wrath!"', "Renewed Focus", "Signet of Courage"]
         # Format: {ELITE_SPEC: [spec heal, [spec utilities], spec elite]}
         self.elite_spec_skills = {
+            "Luminary": ["Resolute Stance", ["Stalwart Stance", "Valorous Stance", "Effulgent Stance", "Piercing Stance"], "Daring Advance"],
             "Dragonhunter": ["Purification", ["Fragments of Faith", "Light's Judgment", "Test of Faith", "Procession of Blades"], "Dragon's Maw"], 
             "Firebrand": ["Mantra of Solace", ["Mantra of Flame", "Mantra of Lore","Mantra of Truth","Mantra of Potence"], "Mantra of Liberation"], 
             "Willbender": ["Reversal of Fortune", ["Flash Combo", "Whirling Light", "Heel Crack","Roiling Light"], "Heaven's Palm"] 
@@ -120,7 +133,7 @@ class Engineer:
     def __init__(self):
         self.professionname = "Engineer"
         self.core_specs = ["Explosives","Firearms","Inventions","Alchemy","Tools"]
-        self.elite_specs = ["Scrapper","Holosmith","Mechanist"]
+        self.elite_specs = ["Scrapper","Holosmith","Mechanist","Amalgam"]
         # Note: two-handed weapons must be in both the mainhand list and the offhand list (because i'm too lazy to figure out a more elegant way to do this)
         self.mainhands = ["Hammer","Rifle","Sword","Mace", "Shortbow", "Spear"]
         self.offhands = ["Pistol","Shield"]
@@ -130,6 +143,7 @@ class Engineer:
         self.elite_skill_list = ["Elite Mortar Kit","Elixir X","Supply Crate"]
         # Format: {ELITE_SPEC: [spec heal, [spec utilities], spec elite]}
         self.elite_spec_skills = {
+            "Amalgam": ["Mitotic State", ["Solid State", "Liquid State", "Gaseous State", "Plasmatic State"], "Flux State"],
             "Scrapper": ["Medic Gyro", ["Blast Gyro","Bulwark Gyro","Purge Gyro","Shredder Gyro"], "Sneak Gyro"], 
             "Holosmith": ["Coolant Blast", ["Spectrum Shield","Hard Light Arena","Laser Disk","Photon Wall"], "Prime Light Beam"], 
             "Mechanist": ["Rectifier Signet", ["Barrier Signet","Force Signet","Shift Signet","Superconducting Signet"], "Overclock Signet"] 
@@ -140,7 +154,7 @@ class Elementalist:
     def __init__(self):
         self.professionname = "Elementalist"
         self.core_specs = ["Fire","Air","Water","Earth","Arcane"]
-        self.elite_specs = ["Tempest","Weaver","Catalyst"]
+        self.elite_specs = ["Tempest","Weaver","Catalyst","Evoker"]
         # Note: two-handed weapons must be in both the mainhand list and the offhand list (because i'm too lazy to figure out a more elegant way to do this)
         self.mainhands = ["Hammer","Staff","Dagger","Scepter","Sword", "Pistol", "Spear"]
         self.offhands = ["Dagger","Focus","Warhorn"]
@@ -150,6 +164,7 @@ class Elementalist:
         self.elite_skill_list = ["Conjure Fiery Greatsword","Glyph of Elementals","Tornado"]
         # Format: {ELITE_SPEC: [spec heal, [spec utilities], spec elite]}
         self.elite_spec_skills = {
+            "Evoker": ["Rejuvenate", ["Fox's Fury","Otter's Compassion","Hare's Agility","Toad's Fortitude"], "Elemental Procession"],
             "Tempest": ['"Wash the Pain Away!"', ['"Feel the Burn!"','"Eye of the Storm!"','"Aftershock!"','"Flash-Freeze!"'], '"Rebound!"'], 
             "Weaver": ["Aquatic Stance", ["Primordial Stance","Stone Resonance","Unravel","Twist of Fate"], "Weave Self"], 
             "Catalyst": ["Soothing Water", ["Relentless Fire","Shattering Ice","Invigorating Air","Fortified Earth"], "Elemental Celerity"] 
@@ -160,7 +175,7 @@ class Necromancer:
     def __init__(self):
         self.professionname = "Necromancer"
         self.core_specs = ["Spite","Curses","Death Magic","Blood Magic","Soul Reaping"]
-        self.elite_specs = ["Reaper","Scourge","Harbinger"]
+        self.elite_specs = ["Reaper","Scourge","Harbinger","Ritualist"]
         # Note: two-handed weapons must be in both the mainhand list and the offhand list (because i'm too lazy to figure out a more elegant way to do this)
         self.mainhands = ["Greatsword","Staff","Axe","Dagger","Scepter","Pistol", "Sword", "Spear"]
         self.offhands = ["Dagger","Focus","Warhorn","Torch", "Sword"]
@@ -169,7 +184,8 @@ class Necromancer:
         self.utility_skill_list = ["Blood Is Power","Corrosive Poison Cloud","Corrupt Boon","Epidemic","Summon Bone Fiend","Summon Bone Minions","Summon Flesh Wurm","Summon Shadow Fiend", "Plague Signet","Signet of Spite","Signet of the Locust","Signet of Undeath","Spectral Armor","Spectral Grasp","Spectral Walk","Spectral Ring","Well of Corruption","Well of Darkness","Well of Power","Well of Suffering"]
         self.elite_skill_list = ["Plaguelands","Summon Flesh Golem","Lich Form"]
         # Format: {ELITE_SPEC: [spec heal, [spec utilities], spec elite]}
-        self.elite_spec_skills = {
+        self.elite_spec_skills = {\
+            "Ritualist": ["Resilient Weapon", ["Splinter Weapon","Nightmare Weapon","Weapon of Remedy","Weapon of Warding"], "Xinrae's Weapon"],
             "Reaper": ['"Your Soul Is Mine!"', ['"Nothing Can Save You!"','"Rise!"','"Suffer!"','"You Are All Weaklings!"'], '"Chilled to the Bone!"'], 
             "Scourge": ["Sand Flare", ["Trail of Anguish","Desiccate","Sand Swell","Serpent Siphon"], "Ghastly Breach"], 
             "Harbinger": ["Elixir of Promise", ["Elixir of Risk","Elixir of Anguish","Elixir of Bliss","Elixir of Ignorance"], "Elixir of Ambition"] 
@@ -181,19 +197,19 @@ class Revenant:
     def __init__(self):
         self.professionname = "Revenant"
         self.core_specs = ["Corruption", "Retribution", "Salvation", "Invocation", "Devastation"]
-        self.elite_specs = ["Herald", "Renegade", "Vindicator"]
+        self.elite_specs = ["Herald", "Renegade", "Vindicator", "Conduit"]
         self.mainhands = ["Mace", "Sword", "Greatsword", "Hammer", "Shortbow", "Staff", "Scepter", "Spear"]
         self.offhands = ["Axe", "Shield", "Sword"]
         self.twohands = ["Greatsword", "Hammer", "Shortbow", "Staff", "Spear"]
         self.legends = ["Mallyx", "Ventari", "Shiro", "Jalis"]
-        self.elitelegends = {"Herald": "Glint", "Renegade": "Scorchrazor", "Vindicator": "Alliance"}
+        self.elitelegends = {"Herald": "Glint", "Renegade": "Scorchrazor", "Vindicator": "Alliance", "Conduit": "Razah"}
         pass
 
 class Ranger:
     def __init__(self):
         self.professionname = "Ranger"
         self.core_specs = ["Marksmanship", "Skirmishing", "Wilderness Survival", "Nature Magic", "Beastmastery"]
-        self.elite_specs = ["Druid", "Soulbeast", "Untamed"]
+        self.elite_specs = ["Druid", "Soulbeast", "Untamed", "Galeshot"]
         self.mainhands = ["Axe", "Staff", "Sword", "Dagger", "Greatsword", "Hammer", "Longbow", "Shortbow", "Mace", "Spear"]
         self.offhands = ["Axe", "Warhorn", "Dagger", "Torch", "Mace"]
         self.twohands = ["Greatsword", "Hammer", "Longbow", "Shortbow", "Staff", "Spear"]
@@ -205,8 +221,9 @@ class Ranger:
                                     "Flame Trap", "Frost Trap", "Spike Trap", "Viper's Nest"]
         self.elite_skill_list = ['"Strength of the Pack!"', "Spirit of Nature", "Entangle"]
         # Format: {ELITE_SPEC: [spec heal, [spec utilities], spec elite]}
-        self.pets = ["Aether Hunter", "Arctodus", "Black Bear", "Brown Bear", "Murellow", "Polar Bear", "Eagle", "Hawk", "Owl", "Raven", "White Raven", "Bristleback", "Alpine Wolf", "Fern Hound", "Krytan Drakehound", "Wolf", "Hyena", "Carrion Devourer", "Lashtail Devourer", "Whiptail Devourer", "Ice Drake", "Marsh Drake", "Reef Drake", "River Drake", "Salamander Drake", "Jaguar", "Jungle Stalker", "Snow Leopard", "Tiger", "White Tiger", "Cheetah", "Lynx", "Sand Lion", "Fanged Iboga", "Jacaranda", "Black Moa", "Blue Moa", "Pink Moa", "Red Moa", "White Moa", "Phoenix", "Boar", "Pig", "Siamoth", "Warthog", "Rock Gazelle", "Siege Turtle", "Smokescale", "Black Widow Spider", "Cave Spider", "Forest Spider", "Jungle Spider", "Wallow", "Electric Wyvern", "Fire Wyvern"]
+        self.pets = list(pets_dict.keys())
         self.elite_spec_skills = {
+            "Galeshot": ["Soothing Breeze", ["Piercing Gales", "Wind Shear", "Whirlwind", "Mistral"], "Perfect Storm"],
             "Druid": ["Glyph of Rejuvenation", ["Glyph of Alignment", "Glyph of Equality", "Glyph of Unity", "Glyph of the Tides"], "Glyph of the Stars"], 
             "Soulbeast": ["Bear Stance", ["Dolyak Stance", "Griffon Stance", "Moa Stance", "Vulture Stance"], "One Wolf Pack"], 
             "Untamed": ["Perilous Gift", ["Exploding Spores", "Mutate Conditions", "Unnatural Traversal", "Nature's Binding"], "Forest's Fortification"] 
@@ -377,7 +394,7 @@ def generate_build(profession, specchoice = None):
         else:
             legends = random.sample(profession.legends, 2)
 
-        # The next 150 lines are brought to you by Satan. ty rev
+        # The next 150 lines are brought to you by revenant jank. ty revenant!
 
         if legends[0] == "Shiro":
             templatecode += little_endify(intHexDoubleStr(skills_dict["Enchanted Daggers"]))
@@ -462,6 +479,19 @@ def generate_build(profession, specchoice = None):
             templatecode += '0000'
             templatecode += little_endify(intHexDoubleStr(skills_dict["Spear of Archemorus"]))
             templatecode += '0000'
+
+        if legends[0] == "Razah":
+            templatecode += little_endify(intHexDoubleStr(skills_dict["Shielding Hands"]))
+            templatecode += '0000'
+            templatecode += little_endify(intHexDoubleStr(skills_dict["Beguiling Haze"]))
+            templatecode += '0000'
+            templatecode += little_endify(intHexDoubleStr(skills_dict["Gladiator's Defense"]))
+            templatecode += '0000'
+            templatecode += little_endify(intHexDoubleStr(skills_dict["Hex-Eater Vortex"]))
+            templatecode += '0000'
+            templatecode += little_endify(intHexDoubleStr(skills_dict["Twin Moon Sweep"]))
+            templatecode += '0000'
+            
         
         templatecode += intHexByteStr(legends_dict[legends[0]])
         templatecode += intHexByteStr(legends_dict[legends[1]])
@@ -512,6 +542,12 @@ def generate_build(profession, specchoice = None):
             templatecode += little_endify(intHexDoubleStr(skills_dict["Nomad's Advance"]))
             templatecode += little_endify(intHexDoubleStr(skills_dict["Scavenger Burst"]))
             templatecode += little_endify(intHexDoubleStr(skills_dict["Reaver's Rage"]))
+            templatecode += '000000000000'
+
+        if legends[1] == "Razah":
+            templatecode += little_endify(intHexDoubleStr(skills_dict["Beguiling Haze"]))
+            templatecode += little_endify(intHexDoubleStr(skills_dict["Gladiator's Defense"]))
+            templatecode += little_endify(intHexDoubleStr(skills_dict["Hex-Eater Vortex"]))
             templatecode += '000000000000'
             
 
