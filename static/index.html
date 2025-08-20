@@ -216,6 +216,7 @@
             place-items: center; 
             overflow: hidden;
             transition: all 0.3s ease;
+            position: relative;
         }
         .cell:hover {
             transform: scale(1.1);
@@ -228,6 +229,52 @@
             box-shadow: 0 0 10px rgba(122, 162, 247, 0.4);
         }
         .hidden { display: none; }
+        
+        /* Custom tooltip styling */
+        .cell[data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, rgba(36, 40, 59, 0.98), rgba(26, 27, 38, 0.98));
+            color: var(--text);
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.4;
+            white-space: pre-line;
+            max-width: 280px;
+            z-index: 1000;
+            border: 1px solid rgba(122, 162, 247, 0.3);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(122, 162, 247, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+            margin-bottom: 12px;
+            backdrop-filter: blur(10px);
+            font-weight: 500;
+            letter-spacing: 0.2px;
+            /* Remove any transition delay for immediate display */
+            transition: none;
+        }
+        
+        .cell[data-tooltip]:hover::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: rgba(36, 40, 59, 0.98);
+            z-index: 1000;
+            pointer-events: none;
+            margin-bottom: 6px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            /* Remove any transition delay for immediate display */
+            transition: none;
+        }
         
         /* Cute animations */
         @keyframes bounce {
@@ -356,7 +403,24 @@
             
             // Update subtitle with profession and specialization
             const subtitleEl = document.getElementById('build-subtitle');
-            const specName = spec || 'Core';
+            // Use the actual specialization from the server response if available, otherwise use the selected spec or 'Any'
+            let specName = spec || 'Any';
+            if (data.specializations && data.specializations.length > 0) {
+                // If a specific spec was selected, use that, otherwise use the third specialization (elite spec) from the response
+                if (spec) {
+                    specName = spec;
+                } else {
+                    // When "any" is selected, the server returns the actual specializations used
+                    // The third specialization (index 2) is the elite specialization
+                    if (data.specializations.length >= 3) {
+                        const eliteSpec = data.specializations[2];
+                        // Use the isCore attribute from the server
+                        specName = eliteSpec.isCore ? 'Core' : eliteSpec.name;
+                    } else {
+                        specName = 'Core';
+                    }
+                }
+            }
             subtitleEl.textContent = `${data.profession || profession || 'Random'} - ${specName}`;
             
             // Show screenshot button
@@ -424,7 +488,7 @@
                 const nameEl = document.createElement('div'); nameEl.className = 'name'; nameEl.textContent = s.name || '';
 
                 const triad = (s.traits || []).map(x => parseInt(x, 10));
-                // Build 3x3 trait matrix using server-provided icons; grey out non-selected
+                // Build 3x3 trait matrix using server-provided icons and descriptions; grey out non-selected
                 const matrix = (s.trait_matrix || [["","",""],["","",""],["","",""]]);
                 const grid = document.createElement('div'); grid.className = 'traits-grid';
                 // Transpose: swap rows/columns for display
@@ -432,7 +496,37 @@
                     const row = document.createElement('div'); row.className = 'traits-row';
                     for (let c = 0; c < 3; c++) {
                         const cell = document.createElement('div'); cell.className = 'cell';
-                        const img = document.createElement('img'); img.src = (matrix[c] && matrix[c][r]) || ''; cell.appendChild(img);
+                        const traitData = matrix[c] && matrix[c][r];
+                        
+                        // Handle both old string format and new object format
+                        let iconSrc = '';
+                        let traitName = '';
+                        let traitDescription = '';
+                        
+                        if (typeof traitData === 'object' && traitData !== null) {
+                            iconSrc = traitData.icon || '';
+                            traitName = traitData.name || '';
+                            traitDescription = traitData.description || '';
+                        } else {
+                            // Fallback for old format
+                            iconSrc = traitData || '';
+                        }
+                        
+                        if (iconSrc) {
+                            const img = document.createElement('img'); 
+                            img.src = iconSrc; 
+                            cell.appendChild(img);
+                        }
+                        
+                        // Add custom tooltip data attributes
+                        if (traitName || traitDescription) {
+                            let tooltipText = traitName;
+                            if (traitDescription) {
+                                tooltipText += '\n\n' + traitDescription;
+                            }
+                            cell.setAttribute('data-tooltip', tooltipText);
+                        }
+                        
                         const selected = triad[c] === (r+1);
                         cell.classList.add(selected ? 'on' : 'off');
                         row.appendChild(cell);
@@ -441,7 +535,26 @@
                 }
 
                 const specIcon = s.icon || await fetchSpecializationIcon(s.name);
-                if (specIcon) { const img = document.createElement('img'); img.src = specIcon; img.alt = s.name; img.width = 28; img.height = 28; img.style.borderRadius = '6px'; left.appendChild(img); }
+                if (specIcon) { 
+                    const img = document.createElement('img'); 
+                    img.src = specIcon; 
+                    img.alt = s.name; 
+                    img.width = 28; 
+                    img.height = 28; 
+                    img.style.borderRadius = '6px'; 
+                    left.appendChild(img); 
+                    
+                    // Add specialization name under the icon
+                    const nameUnderIcon = document.createElement('div');
+                    // Always show the actual specialization name under the icon
+                    nameUnderIcon.textContent = s.name;
+                    nameUnderIcon.style.fontSize = '11px';
+                    nameUnderIcon.style.color = 'var(--muted)';
+                    nameUnderIcon.style.textAlign = 'center';
+                    nameUnderIcon.style.marginTop = '4px';
+                    nameUnderIcon.style.fontWeight = '500';
+                    left.appendChild(nameUnderIcon);
+                }
 
                 right.appendChild(grid);
                 row.appendChild(left); row.appendChild(right);

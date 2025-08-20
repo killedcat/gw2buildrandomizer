@@ -160,7 +160,7 @@ class Elementalist:
         self.offhands = ["Dagger","Focus","Warhorn"]
         self.twohands = ["Hammer","Staff", "Spear"]
         self.healing_skill_list = ["Arcane Brilliance","Ether Renewal","Glyph of Elemental Harmony","Signet of Restoration"]
-        self.utility_skill_list = ["Arcane Blast","Arcane Power","Arcane Shield","Arcane Wave","Armor of Earth","Cleansing Fire","Lightning Flash","Mist Form","Conjure Earth Shield","Conjure Flame Axe","Conjure Frost Bow","Conjure Lightning Hammer","Glyph of Elemental Power","Glyph of Lesser Elementals","Glyph of Renewal","Glyph of Storms","Signet of Air","Signet of Earth","Signet of Water","Signet of Fire"]
+        self.utility_skill_list = ["Arcane Blast","Arcane Echo","Arcane Shield","Arcane Wave","Armor of Earth","Cleansing Fire","Lightning Flash","Mist Form","Conjure Earth Shield","Conjure Flame Axe","Conjure Frost Bow","Conjure Lightning Hammer","Glyph of Elemental Power","Glyph of Lesser Elementals","Glyph of Renewal","Glyph of Storms","Signet of Air","Signet of Earth","Signet of Water","Signet of Fire"]
         self.elite_skill_list = ["Conjure Fiery Greatsword","Glyph of Elementals","Tornado"]
         # Format: {ELITE_SPEC: [spec heal, [spec utilities], spec elite]}
         self.elite_spec_skills = {

@@ -87,12 +87,12 @@ async def on_startup() -> None:
         # Load runes, relics, and sigils dictionary
         print("Loading runes, relics, and sigils dictionary...")
         try:
-            with open("runes_relics_sigils.json", "r", encoding="utf-8") as f:
+            with open("dictionaries/runes_relics_sigils.json", "r", encoding="utf-8") as f:
                 global RUNES_RELICS_SIGILS
                 RUNES_RELICS_SIGILS = json.load(f)
             print(f"Loaded {len(RUNES_RELICS_SIGILS)} runes, relics, and sigils")
         except Exception as e:
-            print(f"Error loading runes_relics_sigils.json: {e}")
+            print(f"Error loading dictionaries/runes_relics_sigils.json: {e}")
             RUNES_RELICS_SIGILS = {}
         
         async with httpx.AsyncClient(base_url="https://api.guildwars2.com", timeout=60.0) as client:
@@ -307,6 +307,8 @@ async def api_build(
     for s in specs:
         icon = ""
         matrix_icons: list[list[str]] = [ ["", "", ""], ["", "", ""], ["", "", ""] ]
+        # Check if this specialization is core or elite
+        is_core = s["name"] in instance.core_specs
         try:
             cand = SPEC_NAME_TO_DETAILS.get(norm(s["name"])) or []
             if cand:
@@ -316,15 +318,19 @@ async def api_build(
                 if len(majors) == 9:
                     triad = [int(x) for x in s.get("traits", []) if x]
                     if len(triad) == 3:
-                        # Use cached trait icons for the 3x3 matrix
+                        # Use cached trait icons and descriptions for the 3x3 matrix
                         for r in range(3):
                             for c in range(3):
                                 trait_id = majors[r*3 + c]
                                 trait_data = TRAIT_ID_TO_DETAILS.get(trait_id, {})
-                                matrix_icons[r][c] = trait_data.get("icon", "") or ""
+                                matrix_icons[r][c] = {
+                                    "icon": trait_data.get("icon", "") or "",
+                                    "name": trait_data.get("name", "") or "",
+                                    "description": trait_data.get("description", "") or ""
+                                }
         except Exception:
             pass
-        enriched_specs.append({"name": s["name"], "traits": s["traits"], "icon": icon, "trait_matrix": matrix_icons})
+        enriched_specs.append({"name": s["name"], "traits": s["traits"], "icon": icon, "trait_matrix": matrix_icons, "isCore": is_core})
 
         # PvP amulet, rune, and relic parsing
         amulet_icon = ""

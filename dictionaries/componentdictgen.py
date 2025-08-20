@@ -30,9 +30,16 @@ def main():
         for item in items:
             name = item.get("name", "")
             icon = item.get("icon", "")
-            if name and icon and name.startswith(PREFIXES):
-                data[name] = icon
-                print(f"✔ added: {name}")
+            if not (name and icon and name.startswith(PREFIXES)):
+                continue
+
+            # For relics, ensure rarity is Exotic
+            if name.startswith("Relic of"):
+                if item.get("rarity") != "Exotic":
+                    continue
+
+            data[name] = icon
+            print(f"✔ added: {name}")
 
         processed = min(i + BATCH_SIZE, total)
         print(f"[{processed}/{total}] processed batch {i//BATCH_SIZE + 1}")

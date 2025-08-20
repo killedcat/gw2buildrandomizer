@@ -17,3 +17,4 @@ if __name__ == "__main__":
     run_script("petdictgen.py")
     run_script("skilldictgen.py")
     run_script("specdictgen.py")
+    run_script("componentdictgen.py")

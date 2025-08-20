@@ -89,6 +89,13 @@ def main():
         if prof == "Revenant":
             patch_revenant(skill_palette, id_to_palette)
 
+    # Add missing Alliance stance skills manually (or Alliance stance breaks)
+    skill_palette["Selfish Spirit"] = 4572
+    skill_palette["Nomad's Advance"] = 4614
+    skill_palette["Scavenger Burst"] = 4651
+    skill_palette["Reaver's Rage"] = 4564
+    skill_palette["Spear of Archemorus"] = 4554
+
     with open("skill_palette.json", "w", encoding="utf-8") as f:
         json.dump(skill_palette, f, ensure_ascii=False, indent=2)
     print("\ndone. saved to skill_palette.json")
