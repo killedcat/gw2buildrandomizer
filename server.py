@@ -198,6 +198,8 @@ async def list_professions() -> dict:
 async def api_build(
     profession: Optional[str] = Query(default=None, description="Profession name, e.g., Guardian"),
     spec: Optional[str] = Query(default=None, description="Elite spec name or 'core'"),
+    beta_only: Optional[bool] = Query(default=False, description="Only use the latest elite spec (beta)"),
+    skaluram_mode: Optional[bool] = Query(default=False, description="Always use Paladin amulet"),
 ) -> dict:
     if not profession:
         profession = random.choice(list(profession_factories.keys()))
@@ -205,7 +207,19 @@ async def api_build(
     if prof_name not in profession_factories:
         return {"error": "Unknown profession"}
     instance = profession_factories[prof_name]()
+    
+    # Handle beta mode - if enabled and no specific spec is selected, use the latest elite spec
+    if beta_only and not spec:
+        # Get the latest elite spec (last in the list)
+        if instance.elite_specs:
+            spec = list(instance.elite_specs)[-1]
+    
     text = static_generate_build(instance, spec)
+    
+    # Override amulet in text if Skaluram mode is enabled
+    if skaluram_mode:
+        text = re.sub(r"^(.+?) Amulet, Rune of (.+?), Relic of (.+?)$", r"Paladin Amulet, Rune of \2, Relic of \3", text, flags=re.MULTILINE)
+    
     m = re.search(r"\[&[^\]]+\]", text)
     chat_link = m.group(0) if m else ""
     # Parse details for UI
@@ -332,53 +346,57 @@ async def api_build(
             pass
         enriched_specs.append({"name": s["name"], "traits": s["traits"], "icon": icon, "trait_matrix": matrix_icons, "isCore": is_core})
 
-        # PvP amulet, rune, and relic parsing
-        amulet_icon = ""
-        amulet_name = ""
-        rune_name = ""
-        relic_name = ""
-        rune_icon = ""
-        relic_icon = ""
-        try:
-            am_match = re.search(r"^(.+?) Amulet, Rune of (.+?), Relic of (.+?)$", text, re.M)
-            if am_match:
+    # PvP amulet, rune, and relic parsing (moved outside the specialization loop)
+    amulet_icon = ""
+    amulet_name = ""
+    rune_name = ""
+    relic_name = ""
+    rune_icon = ""
+    relic_icon = ""
+    try:
+        am_match = re.search(r"^(.+?) Amulet, Rune of (.+?), Relic of (.+?)$", text, re.M)
+        if am_match:
+            # Override amulet name if Skaluram mode is enabled
+            if skaluram_mode:
+                amulet_name = "Paladin"
+            else:
                 amulet_name = am_match.group(1).strip()
-                rune_name = am_match.group(2).strip()
-                relic_name = am_match.group(3).strip()
-                
-                # Get amulet icon from cache
-                target = f"{amulet_name} Amulet"
-                hit = PVP_AMULET_NAME_TO_DETAILS.get(target, {})
-                amulet_icon = hit.get("icon", "") or ""
-                
-                # Get rune icon from dictionary
-                try:
-                    rune_candidates = [
-                        f"Superior Rune of {rune_name}",
-                        f"Major Rune of {rune_name}",
-                        f"Minor Rune of {rune_name}",
-                        f"Rune of {rune_name}",
-                    ]
-                    for query in rune_candidates:
-                        if query in RUNES_RELICS_SIGILS:
-                            rune_icon = RUNES_RELICS_SIGILS[query]
-                            break
-                except Exception:
-                    pass
-                
-                # Get relic icon from dictionary
-                try:
-                    relic_candidates = [
-                        f"Relic of {relic_name}",
-                    ]
-                    for query in relic_candidates:
-                        if query in RUNES_RELICS_SIGILS:
-                            relic_icon = RUNES_RELICS_SIGILS[query]
-                            break
-                except Exception:
-                    pass
-        except Exception:
-            pass
+            rune_name = am_match.group(2).strip()
+            relic_name = am_match.group(3).strip()
+            
+            # Get amulet icon from cache
+            target = f"{amulet_name} Amulet"
+            hit = PVP_AMULET_NAME_TO_DETAILS.get(target, {})
+            amulet_icon = hit.get("icon", "") or ""
+            
+            # Get rune icon from dictionary
+            try:
+                rune_candidates = [
+                    f"Superior Rune of {rune_name}",
+                    f"Major Rune of {rune_name}",
+                    f"Minor Rune of {rune_name}",
+                    f"Rune of {rune_name}",
+                ]
+                for query in rune_candidates:
+                    if query in RUNES_RELICS_SIGILS:
+                        rune_icon = RUNES_RELICS_SIGILS[query]
+                        break
+            except Exception:
+                pass
+            
+            # Get relic icon from dictionary
+            try:
+                relic_candidates = [
+                    f"Relic of {relic_name}",
+                ]
+                for query in relic_candidates:
+                    if query in RUNES_RELICS_SIGILS:
+                        relic_icon = RUNES_RELICS_SIGILS[query]
+                        break
+            except Exception:
+                pass
+    except Exception:
+        pass
 
     return {
         "profession": prof_name,
@@ -400,13 +418,19 @@ async def api_build(
 
 
 @app.get("/api/specs")
-async def api_specs(profession: str) -> dict:
+async def api_specs(profession: str, beta_only: Optional[bool] = Query(default=False, description="Only show the latest elite spec (beta)")) -> dict:
     prof_name = profession.capitalize()
     if prof_name not in profession_factories:
         return {"specs": []}
     inst = profession_factories[prof_name]()
-    # core marker plus elite specs
-    return {"specs": ["core"] + list(inst.elite_specs)}
+    
+    if beta_only and inst.elite_specs:
+        # Only return core and the latest elite spec
+        latest_elite = list(inst.elite_specs)[-1]
+        return {"specs": ["core", latest_elite]}
+    else:
+        # Return all specs
+        return {"specs": ["core"] + list(inst.elite_specs)}
 
 
 @app.get("/")
